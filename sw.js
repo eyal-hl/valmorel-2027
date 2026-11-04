@@ -1,4 +1,5 @@
-// Offline support. Same-origin files are fetched fresh when online and served
+// Offline support. Same-origin files are revalidated with the server when online
+// (GitHub Pages otherwise lets browsers reuse files for 10 minutes) and served
 // from the cache otherwise. Paths are relative so this works under a
 // GitHub Pages project path such as /franceTrip/.
 const CACHE = 'carnet-v1';
@@ -33,7 +34,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: 'no-cache' })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
