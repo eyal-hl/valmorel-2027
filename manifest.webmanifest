@@ -1,7 +1,7 @@
 {
   "name": "Carnet de France",
   "short_name": "Valmorel",
-  "description": "A ski week in the French Alps: countdown, plan, map and things to do.",
+  "description": "A snowboard week in the French Alps: countdown, plan, map and things to do.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

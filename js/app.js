@@ -36,7 +36,7 @@
   const toggled = (list, value, on) => (on ? [...list.filter((v) => v !== value), value] : list.filter((v) => v !== value));
 
   const mapsUrl = (query) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-  const TYPE_LABEL = { flight: 'Flight', train: 'Train', car: 'Transfer', hotel: 'Stay', ski: 'Ski', sight: 'Explore', food: 'Eat', note: 'Note' };
+  const TYPE_LABEL = { flight: 'Flight', train: 'Train', car: 'Transfer', hotel: 'Stay', ski: 'Ride', sight: 'Explore', food: 'Eat', note: 'Note' };
   const STATUS_LABEL = { booked: 'Booked', todo: 'To sort', idea: 'Idea' };
   const WHEN_AT = { Morning: '09:00', Lunch: '12:30', Afternoon: '13:30', Evening: '18:30' };
 
@@ -274,10 +274,8 @@
         <p class="muted small">${esc(lessons.dayNote)}</p>
 
         <h3 class="sub-title">Which level are you?</h3>
-        <div class="level-cols">
-          <div><h4>Ski</h4>${levelRows(lessons.ski)}</div>
-          <div><h4>Snowboard</h4>${levelRows(lessons.board)}</div>
-        </div>
+        ${levelRows(lessons.board)}
+        <p class="muted small">${esc(lessons.levelNote)}</p>
 
         <h3 class="sub-title">What guests say</h3>
         <dl class="facts">${lessons.reviews.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
@@ -644,7 +642,7 @@
     view.innerHTML = `<h1 class="page-title">The mountain</h1>
 
       <section>
-        <h2 class="section-title">Check before you ski</h2>
+        <h2 class="section-title">Check before you ride</h2>
         <p class="muted lede">These open Valmorel's and Météo-France's live pages. The forecast on Home is a quick overview.</p>
         <div class="link-cards">
           ${m.links.map((l) => `<a class="link-card" href="${esc(l.url)}" target="_blank" rel="noopener">
@@ -652,6 +650,21 @@
             <span class="muted">${esc(l.detail)}</span>
           </a>`).join('')}
         </div>
+      </section>
+
+      <section>
+        <h2 class="section-title">Valmorel on a snowboard</h2>
+        <p class="muted lede">From resort guides of varying age. One guest's Tripadvisor review is titled "Snowboarding trip was fantastic", so opinions differ.</p>
+        <ul class="pay-list">
+          ${m.board.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span></li>`).join('')}
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">Snowboard tips</h2>
+        <ul class="pay-list">
+          ${m.tips.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span></li>`).join('')}
+        </ul>
       </section>
 
       <section>
@@ -663,6 +676,7 @@
 
       <section>
         <h2 class="section-title">How to ride the lifts</h2>
+        <p class="muted lede">General snowboarding advice. Your instructor can show you on the first day.</p>
         <ul class="pay-list">
           ${m.lifts.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span></li>`).join('')}
         </ul>
@@ -738,7 +752,7 @@
         </ul>
         <form class="inline-form" data-form="spend">
           <label class="sr-only" for="spend-what">What it was for</label>
-          <input id="spend-what" name="what" placeholder="e.g. Ski rental" autocomplete="off" required>
+          <input id="spend-what" name="what" placeholder="e.g. Board rental" autocomplete="off" required>
           <label class="sr-only" for="spend-amount">Amount in euros</label>
           <input id="spend-amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="Amount in €" required>
           <button class="btn" type="submit">Add</button>
