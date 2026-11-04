@@ -447,3 +447,56 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 .facts > div { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
 .facts dt { font-weight: 700; }
 .facts dd { margin: 0; }
+
+/* Explore: map section */
+.map-section .chips { margin-bottom: 10px; }
+.map-section .map { height: min(44vh, 440px); }
+.map-section .legend { margin-top: 10px; }
+.map-section .small { margin-top: 6px; }
+#explore-results .chips { margin: 10px 0 0; }
+#explore-results .cards { margin-top: 16px; }
+
+/* Key dates */
+.key-dates { list-style: none; margin: 0 0 12px; padding: 0; }
+.key-dates li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.key-dates li > span { display: flex; flex-direction: column; min-width: 0; }
+.key-dates small { font-size: 14px; }
+.key-dates .is-past { opacity: 0.55; }
+.kd-when strong { font: 600 17px var(--serif); }
+
+/* Journal */
+.journal { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.journal summary { cursor: pointer; font-weight: 700; min-height: 32px; color: var(--bleu); }
+.journal label { display: block; margin: 10px 0 4px; font-size: 14px; font-weight: 600; }
+.journal input, .journal textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px var(--sans);
+  resize: vertical;
+}
+
+/* Mountain */
+.link-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.link-card strong { color: var(--bleu); }
+.piste-colours { list-style: none; margin: 0; padding: 0; }
+.piste-colours li { display: grid; grid-template-columns: 20px 56px 1fr; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.piste-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgb(255 255 255 / 45%); }
+.rules { margin: 0; padding-left: 26px; }
+.rules li { padding: 5px 0; }
+.say { min-height: 36px; padding: 0 12px; margin-top: 6px; font-size: 13px; }

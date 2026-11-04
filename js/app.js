@@ -59,7 +59,7 @@
   }
 
   /* ---------- navigation ---------- */
-  const TABS = [['home', 'Home'], ['plan', 'Plan'], ['included', 'Included'], ['map', 'Map'], ['explore', 'Explore'], ['kit', 'Kit']];
+  const TABS = [['home', 'Home'], ['plan', 'Plan'], ['included', 'Included'], ['mountain', 'Mountain'], ['explore', 'Explore'], ['kit', 'Kit']];
   const currentTab = () => { const id = location.hash.slice(1); return TABS.some(([t]) => t === id) ? id : 'home'; };
 
   let map = null;
@@ -72,7 +72,7 @@
     document.getElementById('nav').innerHTML = TABS
       .map(([id, label]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ''}>${label}</a>`)
       .join('');
-    ({ home: renderHome, plan: renderPlan, included: renderIncluded, map: renderMap, explore: renderExplore, kit: renderKit })[tab]();
+    ({ home: renderHome, plan: renderPlan, included: renderIncluded, mountain: renderMountain, explore: renderExplore, kit: renderKit })[tab]();
     window.scrollTo(0, 0);
   }
 
@@ -162,6 +162,62 @@
     </section>`;
   }
 
+  function datesHtml() {
+    if (phase() === 'after') return '';
+    const t = today();
+    const until = (date) => {
+      const n = dayDiff(t, date);
+      if (n === 0) return 'Today';
+      if (n < 0) return 'Done';
+      return n === 1 ? 'Tomorrow' : `In ${n} days`;
+    };
+    return `<section>
+      <h2 class="section-title">Key dates</h2>
+      <ul class="key-dates">
+        ${trip.dates.map((k) => `<li class="${k.date < t ? 'is-past' : ''}">
+          <span class="kd-when"><strong>${esc(shortDate(k.date))}</strong><small class="muted">${esc(until(k.date))}</small></span>
+          <span><strong>${esc(k.title)}</strong><small class="muted">${esc(k.detail)}</small></span>
+        </li>`).join('')}
+      </ul>
+      <button class="btn btn-quiet" data-action="calendar">Add to my calendar</button>
+    </section>`;
+  }
+
+  function calendarText() {
+    const compact = (ymd) => ymd.replace(/-/g, '');
+    const nextDay = (ymd) => new Date(toUTC(ymd) + 86400000).toISOString().slice(0, 10);
+    const text = (s) => s.replace(/([\\,;])/g, '\\$1');
+    const stamp = `${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`;
+    const fold = (line) => {
+      const parts = [];
+      for (let i = 0; i < line.length; i += 60) parts.push(line.slice(i, i + 60));
+      return parts.join('\r\n ');
+    };
+    const events = trip.dates.filter((k) => k.date >= today()).flatMap((k) => [
+      'BEGIN:VEVENT',
+      `UID:${k.date}-${compact(k.title).replace(/\W/g, '')}@valmorel-2027`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${compact(k.date)}`,
+      `DTEND;VALUE=DATE:${compact(nextDay(k.date))}`,
+      `SUMMARY:${text(k.title)}`,
+      `DESCRIPTION:${text(k.detail)}`,
+      'END:VEVENT',
+    ]);
+    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Carnet de France//Valmorel 2027//EN', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR']
+      .map(fold).join('\r\n');
+  }
+
+  function downloadCalendar() {
+    const url = URL.createObjectURL(new Blob([calendarText()], { type: 'text/calendar;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'valmorel-2027.ics';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
   function stayHtml() {
     return `<section>
       <h2 class="section-title">Where you're staying</h2>
@@ -190,7 +246,7 @@
     const levelRows = (rows) => `<dl class="levels">${rows.map(([level, what]) => `<div><dt>${esc(level)}</dt><dd>${esc(what)}</dd></div>`).join('')}</dl>`;
 
     view.innerHTML = `<h1 class="page-title">What's included</h1>
-      <p class="muted lede">From Club Med's public pages, not your own contract. Your voucher is the final word.</p>
+      <p class="muted lede">Mostly from Club Med's public pages, not your own contract. Your voucher is the final word.</p>
       <button class="btn btn-quiet" data-action="jump-lessons">How group lessons work</button>
 
       <section>
@@ -254,7 +310,7 @@
         <h2 class="section-title">Valmorel right now</h2>
         <div id="weather"><p class="muted">Loading the forecast…</p></div>
       </section>
-      ${todosHtml()}${stayHtml()}`;
+      ${todosHtml()}${datesHtml()}${stayHtml()}`;
     if (phase() === 'before') startClock();
     loadWeather();
   }
@@ -352,6 +408,48 @@
     </ul>`;
   }
 
+  const JOURNAL_FIELDS = [
+    ['run', 'Best run'],
+    ['food', 'Best thing we ate'],
+    ['notes', 'Notes'],
+  ];
+
+  function journalHtml(day) {
+    const entry = load('journal', {})[day.date] || {};
+    const filled = JOURNAL_FIELDS.some(([key]) => entry[key]);
+    return `<details class="journal">
+      <summary>Journal<span class="muted small" data-journal-mark="${esc(day.date)}">${filled ? ' · has notes' : ''}</span></summary>
+      ${JOURNAL_FIELDS.map(([key, label]) => {
+        const id = `j-${day.date}-${key}`;
+        const attrs = `id="${id}" data-action="journal" data-date="${esc(day.date)}" data-field="${key}" autocomplete="off"`;
+        return `<label for="${id}">${esc(label)}</label>${key === 'notes'
+          ? `<textarea ${attrs} rows="3">${esc(entry[key] || '')}</textarea>`
+          : `<input ${attrs} value="${esc(entry[key] || '')}">`}`;
+      }).join('')}
+    </details>`;
+  }
+
+  function journalText() {
+    const journal = load('journal', {});
+    return trip.days.map((day) => {
+      const entry = journal[day.date] || {};
+      const lines = JOURNAL_FIELDS.filter(([key]) => entry[key]).map(([key, label]) => `${label}: ${entry[key]}`);
+      return lines.length ? [`${dayDate(day.date)}: ${day.title}`, ...lines].join('\n') : null;
+    }).filter(Boolean).join('\n\n');
+  }
+
+  async function copyJournal() {
+    const status = document.getElementById('journal-status');
+    const text = journalText();
+    if (!text) { status.textContent = 'Nothing to copy yet.'; return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = 'Copied.';
+    } catch (e) {
+      status.textContent = "Couldn't copy on this device. Try opening the site in your browser instead.";
+    }
+  }
+
   function renderPlan() {
     const hasToday = trip.days.some((d) => d.date === today());
     view.innerHTML = `<h1 class="page-title">Day by day</h1>
@@ -363,10 +461,17 @@
           <h2>${esc(day.title)}</h2>
         </header>
         ${timelineHtml(day)}
+        ${journalHtml(day)}
       </article>`).join('')}
       <section>
-        <h2 class="section-title">Getting to the resort</h2>
-        <p class="muted lede">Transfer times from Club Med. Add time for snow and for winter Sunday traffic.</p>
+        <h2 class="section-title">Your journal</h2>
+        <p class="muted lede">Notes are saved on this device only. Copy them somewhere safe at the end of the trip.</p>
+        <button class="btn btn-quiet" data-action="copy-journal">Copy the whole journal</button>
+        <p class="muted small" id="journal-status" role="status"></p>
+      </section>
+      <section>
+        <h2 class="section-title">Transfer times</h2>
+        <p class="muted lede">Club Med is handling your flights and transfers. These are its typical times to the resort, for reference.</p>
         <ul class="gateways">
           ${trip.gateways.map((g) => `<li>
             <strong class="gw-time">${esc(g.time)}</strong>
@@ -379,9 +484,9 @@
   /* ---------- map ---------- */
   const STATUS_COLOR = { resort: '#1f3a8a', region: '#c8102e' };
 
-  function renderMap() {
-    view.innerHTML = `<h1 class="page-title">The map</h1>
-      <div class="chips" role="group" aria-label="Zoom to">
+  function mapHtml() {
+    return `<section class="map-section">
+      <div class="chips" role="group" aria-label="Zoom the map to">
         <button class="chip" data-action="map-fit" data-fit="resort">The resort</button>
         <button class="chip" data-action="map-fit" data-fit="region">Day trips</button>
         <button class="chip" data-action="map-fit" data-fit="all">Airports too</button>
@@ -392,8 +497,11 @@
         <span><i class="dot" style="background:${STATUS_COLOR.region}"></i>Day trips</span>
         <span><i class="dot square"></i>Airports and station</span>
       </p>
-      <p class="muted small">The map needs a connection. Everything else works offline.</p>`;
+      <p class="muted small">The map needs a connection. Everything else works offline.</p>
+    </section>`;
+  }
 
+  function initMap() {
     if (!window.L) {
       document.getElementById('map').innerHTML = '<p class="muted map-fallback">The map could not load.</p>';
       return;
@@ -441,7 +549,32 @@
   const exploreState = { type: 'All', show: 'all' };
   const TYPES = ['All', ...new Set(trip.attractions.map((a) => a.type))];
 
+  function foodHtml() {
+    const tried = load('tried', []);
+    return `<section>
+      <h2 class="section-title">Savoyard food to try <span class="muted small" id="food-count">${trip.food.filter((f) => tried.includes(f.id)).length} of ${trip.food.length} tried</span></h2>
+      <div class="todos">
+        ${trip.food.map((f) => `<label class="check todo">
+          <input type="checkbox" data-action="toggle-food" data-id="${esc(f.id)}" ${tried.includes(f.id) ? 'checked' : ''}>
+          <span><strong>${esc(f.name)}</strong><small class="muted">${esc(f.what)}</small></span>
+        </label>`).join('')}
+      </div>
+    </section>`;
+  }
+
   function renderExplore() {
+    view.innerHTML = `<h1 class="page-title">Explore</h1>
+      ${mapHtml()}
+      <section>
+        <h2 class="section-title">Things to do</h2>
+        <div id="explore-results"></div>
+      </section>
+      ${foodHtml()}`;
+    renderExploreResults();
+    initMap();
+  }
+
+  function renderExploreResults() {
     const favs = load('favs', []);
     const visited = load('visited', []);
     const list = trip.attractions.filter((a) => {
@@ -452,8 +585,7 @@
     });
     const chip = (group, value, label, active) => `<button class="chip" aria-pressed="${active}" data-action="explore" data-group="${group}" data-value="${esc(value)}">${esc(label)}</button>`;
 
-    view.innerHTML = `<h1 class="page-title">Things to do</h1>
-      <p class="muted lede">${visited.length} of ${trip.attractions.length} done · ${favs.length} saved. Drive times are rough estimates in good conditions.</p>
+    document.getElementById('explore-results').innerHTML = `<p class="muted">${visited.length} of ${trip.attractions.length} done · ${favs.length} saved. Drive times are rough estimates in good conditions.</p>
       <div class="chips" role="group" aria-label="Filter by type">
         ${TYPES.map((t) => chip('type', t, t, exploreState.type === t)).join('')}
       </div>
@@ -481,6 +613,53 @@
       </div>`;
   }
 
+  /* ---------- mountain ---------- */
+  function renderMountain() {
+    const m = trip.mountain;
+    view.innerHTML = `<h1 class="page-title">The mountain</h1>
+
+      <section>
+        <h2 class="section-title">Check before you ski</h2>
+        <p class="muted lede">These open Valmorel's and Météo-France's live pages. The forecast on Home is a quick overview.</p>
+        <div class="link-cards">
+          ${m.links.map((l) => `<a class="link-card" href="${esc(l.url)}" target="_blank" rel="noopener">
+            <strong>${esc(l.title)} <span aria-hidden="true">↗</span></strong>
+            <span class="muted">${esc(l.detail)}</span>
+          </a>`).join('')}
+        </div>
+      </section>
+
+      <section>
+        <h2 class="section-title">Piste colours</h2>
+        <ul class="piste-colours">
+          ${m.colours.map(([color, name, what]) => `<li><i class="piste-dot" style="background:${esc(color)}"></i><strong>${esc(name)}</strong><span class="muted">${esc(what)}</span></li>`).join('')}
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">How to ride the lifts</h2>
+        <ul class="pay-list">
+          ${m.lifts.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span></li>`).join('')}
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">If someone is hurt</h2>
+        <p class="muted lede">From Valmorel's own accident guidance.</p>
+        <ol class="steps">
+          ${m.accident.map((s) => `<li><strong>${esc(s.title)}</strong><span class="muted">${esc(s.detail)}</span></li>`).join('')}
+        </ol>
+      </section>
+
+      <section>
+        <h2 class="section-title">Rules of the slopes</h2>
+        <p class="muted lede">The 10 international FIS rules, in short.</p>
+        <ol class="rules">
+          ${m.rules.map(([title, what]) => `<li><strong>${esc(title)}.</strong> <span class="muted">${esc(what)}</span></li>`).join('')}
+        </ol>
+      </section>`;
+  }
+
   /* ---------- kit ---------- */
   const EMERGENCY = [
     ['112', 'Any emergency, from anywhere in the EU'],
@@ -497,6 +676,10 @@
     const allItems = Object.values(groups).flat();
     const done = allItems.filter((i) => checked.includes(i)).length;
     const refs = load('refs', []);
+    const spend = load('spend', []);
+    const spent = spend.reduce((sum, s) => sum + s.amount, 0);
+    const euro = (n) => `€${n.toFixed(2)}`;
+    const canSpeak = 'speechSynthesis' in window;
 
     view.innerHTML = `<h1 class="page-title">The kit</h1>
 
@@ -515,6 +698,24 @@
         <form class="inline-form" data-form="pack">
           <label class="sr-only" for="pack-input">Add a packing item</label>
           <input id="pack-input" name="item" placeholder="Add an item" autocomplete="off" required>
+          <button class="btn" type="submit">Add</button>
+        </form>
+      </section>
+
+      <section>
+        <h2 class="section-title">Spending <span class="muted small">${euro(spent)} so far</span></h2>
+        <p class="muted">Log rental, spa and other extras so the final bill has no surprises. Saved on this device only.</p>
+        <ul class="refs">
+          ${spend.map((s, i) => `<li>
+            <span><strong>${esc(s.what)}</strong><br>${euro(s.amount)}</span>
+            <button class="chip" data-action="del-spend" data-index="${i}" aria-label="Remove ${esc(s.what)}">Remove</button>
+          </li>`).join('')}
+        </ul>
+        <form class="inline-form" data-form="spend">
+          <label class="sr-only" for="spend-what">What it was for</label>
+          <input id="spend-what" name="what" placeholder="e.g. Ski rental" autocomplete="off" required>
+          <label class="sr-only" for="spend-amount">Amount in euros</label>
+          <input id="spend-amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="Amount in €" required>
           <button class="btn" type="submit">Add</button>
         </form>
       </section>
@@ -539,6 +740,7 @@
 
       <section>
         <h2 class="section-title">In an emergency</h2>
+        <p class="muted lede">On the slopes, first call the number printed on your lift pass. It reaches slope rescue directly.</p>
         <ul class="emergency">
           ${EMERGENCY.map(([num, what]) => `<li><a class="em-num" href="${num === '114' ? 'sms' : 'tel'}:${num}">${num}</a><span>${esc(what)}</span></li>`).join('')}
         </ul>
@@ -547,7 +749,12 @@
       <section>
         <h2 class="section-title">Useful French</h2>
         <dl class="phrases">
-          ${trip.phrases.map(([en, fr, say]) => `<div><dt>${esc(en)}</dt><dd lang="fr"><strong>${esc(fr)}</strong></dd><dd class="muted">${esc(say)}</dd></div>`).join('')}
+          ${trip.phrases.map(([en, fr, say]) => `<div>
+            <dt>${esc(en)}</dt>
+            <dd lang="fr"><strong>${esc(fr)}</strong></dd>
+            <dd class="muted">${esc(say)}</dd>
+            ${canSpeak ? `<dd><button class="chip say" data-action="say" data-text="${esc(fr)}" aria-label="Hear ${esc(fr)}">▶ Hear it</button></dd>` : ''}
+          </div>`).join('')}
         </dl>
       </section>
 
@@ -566,7 +773,28 @@
     window.scrollTo({ top: y, behavior: 'instant' });
   }
 
+  function speakFrench(text) {
+    const speech = window.speechSynthesis;
+    speech.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 0.9;
+    const voice = speech.getVoices().find((v) => v.lang.toLowerCase().startsWith('fr'));
+    if (voice) utterance.voice = voice;
+    speech.speak(utterance);
+  }
+
   /* ---------- events ---------- */
+  view.addEventListener('input', (event) => {
+    const el = event.target;
+    if (el.dataset.action !== 'journal') return;
+    const journal = load('journal', {});
+    const entry = { ...journal[el.dataset.date], [el.dataset.field]: el.value };
+    save('journal', { ...journal, [el.dataset.date]: entry });
+    const mark = view.querySelector(`[data-journal-mark="${el.dataset.date}"]`);
+    if (mark) mark.textContent = Object.values(entry).some(Boolean) ? ' · has notes' : '';
+  });
+
   view.addEventListener('click', (event) => {
     const el = event.target.closest('[data-action]');
     if (!el) return;
@@ -574,17 +802,28 @@
     if (action === 'jump-today') {
       const target = document.getElementById(`day-${today()}`);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'calendar') {
+      downloadCalendar();
+    } else if (action === 'copy-journal') {
+      copyJournal();
+    } else if (action === 'say') {
+      speakFrench(el.dataset.text);
+    } else if (action === 'del-spend') {
+      const spend = load('spend', []);
+      spend.splice(Number(el.dataset.index), 1);
+      save('spend', spend);
+      refreshKit();
     } else if (action === 'jump-lessons') {
       document.getElementById('lessons').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (action === 'map-fit') {
       fitMap(el.dataset.fit);
     } else if (action === 'explore') {
       exploreState[el.dataset.group] = el.dataset.value;
-      renderExplore();
+      renderExploreResults();
     } else if (action === 'toggle-list') {
       const list = load(el.dataset.list, []);
       save(el.dataset.list, toggled(list, el.dataset.name, !list.includes(el.dataset.name)));
-      renderExplore();
+      renderExploreResults();
     } else if (action === 'del-ref') {
       const refs = load('refs', []);
       refs.splice(Number(el.dataset.index), 1);
@@ -598,6 +837,10 @@
     if (el.dataset.action === 'toggle-pack') {
       save('packed', toggled(load('packed', []), el.dataset.name, el.checked));
       refreshKit();
+    } else if (el.dataset.action === 'toggle-food') {
+      const tried = toggled(load('tried', []), el.dataset.id, el.checked);
+      save('tried', tried);
+      document.getElementById('food-count').textContent = `${trip.food.filter((f) => tried.includes(f.id)).length} of ${trip.food.length} tried`;
     } else if (el.dataset.action === 'toggle-todo') {
       const done = toggled(load('todos', []), el.dataset.id, el.checked);
       save('todos', done);
@@ -612,6 +855,10 @@
     if (form.dataset.form === 'pack') {
       const item = String(data.get('item')).trim();
       if (item) save('packExtras', toggled(load('packExtras', []), item, true));
+    } else if (form.dataset.form === 'spend') {
+      const what = String(data.get('what')).trim();
+      const amount = Number(data.get('amount'));
+      if (what && amount > 0) save('spend', [...load('spend', []), { what, amount }]);
     } else if (form.dataset.form === 'ref') {
       const label = String(data.get('label')).trim();
       const value = String(data.get('value')).trim();
