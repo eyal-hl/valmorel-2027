@@ -229,6 +229,7 @@
         <p class="muted">${esc(resort.address)}</p>
         <div class="card-actions">
           <a class="chip" href="#included">What's included</a>
+          ${mapButton(resort.lat, resort.lon, resort.name)}
           <a class="chip" href="${esc(mapsUrl(resort.name))}" target="_blank" rel="noopener">Open in Maps</a>
           <a class="chip" href="${esc(resort.site)}" target="_blank" rel="noopener">Club Med page</a>
         </div>
@@ -241,6 +242,7 @@
     const payRows = (rows) => `<ul class="pay-list">${rows.map((r) => `<li>
       <strong>${esc(r.title)}</strong>
       <span class="muted">${esc(r.detail)}</span>
+      ${r.lat ? mapButton(r.lat, r.lon, r.title) : ''}
     </li>`).join('')}</ul>`;
 
     const { lessons } = trip;
@@ -491,7 +493,7 @@
         <ul class="gateways">
           ${trip.gateways.map((g) => `<li>
             <strong class="gw-time">${esc(g.time)}</strong>
-            <span><strong>${esc(g.name)}</strong><small class="muted">${esc(g.note)}</small></span>
+            <span><strong>${esc(g.name)}</strong><small class="muted">${esc(g.note)}</small>${mapButton(g.lat, g.lon, g.name)}</span>
           </li>`).join('')}
         </ul>
       </section>`;
@@ -507,6 +509,35 @@
   const mapState = { day: null };
   let overlay = null;
   let dayLegs = [];
+
+  function mapButton(lat, lon, label) {
+    return `<button class="chip map-btn" data-action="go-map" data-lat="${lat}" data-lon="${lon}" data-label="${esc(label)}">On the map</button>`;
+  }
+
+  function applyMapFocus() {
+    const focus = mapState.focus;
+    if (!focus || !map || !overlay) return;
+    mapState.focus = null;
+    const at = [focus.lat, focus.lon];
+    const marker = L.marker(at, {
+      icon: L.divIcon({ className: '', html: '<span class="map-focus"></span>', iconSize: [24, 24], iconAnchor: [12, 12] }),
+      zIndexOffset: 800,
+    }).addTo(overlay).bindPopup(`<strong>${esc(focus.label)}</strong><br><a href="${esc(mapsUrl(`${focus.lat},${focus.lon}`))}" target="_blank" rel="noopener">Open in Maps</a>`);
+    map.setView(at, 14);
+    marker.openPopup();
+    document.getElementById('map-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goToMap(lat, lon, label) {
+    mapState.day = 'all';
+    mapState.focus = { lat, lon, label };
+    if (currentTab() === 'explore' && map) {
+      showMapDay('all');
+      applyMapFocus();
+    } else {
+      location.hash = '#explore';
+    }
+  }
 
   function defaultMapDay() {
     const todays = trip.mapDays.find((m) => m.date === today());
@@ -584,7 +615,7 @@
     document.querySelectorAll('[data-action="map-day"]').forEach((b) => {
       const on = b.dataset.day === id;
       b.setAttribute('aria-pressed', String(on));
-      if (on) b.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' });
+      if (on) b.parentElement.scrollLeft = b.offsetLeft - b.parentElement.offsetLeft - 60;
     });
     dayLegs = [];
     if (map && overlay) {
@@ -622,6 +653,7 @@
       }
     }
     showDayPanel();
+    showPisteDay();
   }
 
   function showDayPanel() {
@@ -629,6 +661,8 @@
     if (!panel) return;
     const id = mapState.day;
     if (id === 'all') {
+      const pisteSteps = document.getElementById('piste-steps');
+      if (pisteSteps) pisteSteps.innerHTML = '';
       panel.innerHTML = `<p class="muted">Tap any run or lift for its name. Pick a day above to see a suggested route. Lifts and runs come from OpenStreetMap, so colours can differ slightly from the official map.</p>
         <div class="chips" role="group" aria-label="Zoom the map to">
           <button class="chip" data-action="map-fit" data-fit="resort">The resort</button>
@@ -645,6 +679,8 @@
     const legHtml = legs.map((leg, i) => (leg.k === 'lift'
       ? `<li><button class="leg" data-action="map-leg" data-index="${i}"><strong>${esc(leg.n)} ${esc(leg.t)}</strong><span class="muted">Lift pass covers it</span></button></li>`
       : `<li><button class="leg" data-action="map-leg" data-index="${i}"><strong>Ride down, about ${(leg.len / 1000).toFixed(1)} km</strong><span class="run-names">${leg.names.map((n) => `<span><i class="dot" style="background:${COLOUR_HEX[n.c] || '#777'}"></i>${esc(n.n)}</span>`).join('')}</span></button></li>`)).join('');
+    const pisteSteps = document.getElementById('piste-steps');
+    if (pisteSteps) pisteSteps.innerHTML = legs.length ? `<p><strong>${esc(day.label)}: ${esc(day.title)}.</strong> ${esc(liftNote)}</p><ol class="steps route-steps">${legHtml.replace(/data-action="map-leg"/g, 'data-action="piste-leg"')}</ol>` : `<p class="muted">No route on the piste map for ${esc(day.label)}. ${esc(day.blurb)}</p>`;
     panel.innerHTML = `<h3 class="sub-title">${esc(day.title)} <span class="badge ${day.pass ? 'status-booked' : 'status-idea'}">${day.pass ? 'Lift pass day' : 'No lift pass'}</span> ${day.idea === false ? '' : '<span class="badge status-idea">Idea</span>'}</h3>
       <p>${esc(day.blurb)}</p>
       ${liftNote ? `<p><strong>${esc(liftNote)}</strong></p>` : ''}
@@ -672,12 +708,18 @@
 
   let pisteMap = null;
   let pisteObserver = null;
+  let pisteLegs = [];
+  let pistePinLayer = null;
+  let pisteRouteLayer = null;
   const pisteMarkers = new Map();
 
   function removePisteMap() {
     if (pisteObserver) { pisteObserver.disconnect(); pisteObserver = null; }
     if (pisteMap) { pisteMap.remove(); pisteMap = null; }
     pisteMarkers.clear();
+    pisteLegs = [];
+    pistePinLayer = null;
+    pisteRouteLayer = null;
   }
 
   function pisteMapHtml() {
@@ -686,8 +728,13 @@
     const offMap = trip.attractions.filter((x) => !x.pistePins);
     return `<section id="piste-section" class="jump-target">
       <h2 class="section-title">On the official piste map</h2>
-      <p class="muted lede">Everything from this page that appears on Valmorel's 2025-26 piste map. Swipe across and pinch to zoom, then tap a number. Some positions are approximate, and the star for Club Med is my estimate because the map doesn't show it.</p>
+      <p class="muted lede">Everything from this page on Valmorel's 2025-26 piste map, plus each day's route. Pick a day, swipe across and pinch to zoom. Some positions are approximate, and the star for Club Med is my estimate because the map doesn't show it.</p>
+      <div class="chips day-chips" role="group" aria-label="Choose a day for the piste map">
+        <button class="chip" aria-pressed="${mapState.day === 'all'}" data-action="map-day" data-day="all">Everything</button>
+        ${trip.mapDays.filter((m) => m.route).map((m) => `<button class="chip" aria-pressed="${mapState.day === m.id}" data-action="map-day" data-day="${esc(m.id)}">${esc(m.label)}</button>`).join('')}
+      </div>
       <div id="piste-map" class="piste-map"></div>
+      <div id="piste-steps" class="piste-steps"></div>
       <div class="card-actions piste-links">
         <a class="chip" href="${esc(pm.marked)}" target="_blank" rel="noopener">Open marked image</a>
         <a class="chip" href="${esc(pm.pdf)}" target="_blank" rel="noopener">Valmorel's PDF</a>
@@ -725,16 +772,19 @@
     L.imageOverlay(pm.image, bounds, { attribution: 'Piste map © Valmorel' }).addTo(pisteMap);
     // Fill the box rather than fitting the whole map, so numbers stay readable on a phone.
     const fillZoom = Math.log2(Math.max(holder.clientWidth / pm.width, holder.clientHeight / pm.height));
-    pisteMap.setMinZoom(fillZoom);
+    // Long routes need to zoom out far enough to fit the whole map.
+    pisteMap.setMinZoom(Math.log2(Math.min(holder.clientWidth / pm.width, holder.clientHeight / pm.height)));
     pisteMap.setMaxBounds(bounds);
     pisteMap.setView(toLatLng([850, pm.height / 2]), fillZoom);
 
+    pistePinLayer = L.layerGroup().addTo(pisteMap);
+    pisteRouteLayer = L.layerGroup().addTo(pisteMap);
     const addPin = (num, at, label, html, isStar) => {
       const marker = L.marker(toLatLng(at), {
         icon: L.divIcon({ className: '', html: `<span class="piste-num ${isStar ? 'piste-star' : ''}">${label}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }),
         zIndexOffset: isStar ? 500 : 0,
         title: label,
-      }).addTo(pisteMap).bindPopup(html);
+      }).addTo(pistePinLayer).bindPopup(html);
       if (!pisteMarkers.has(num)) pisteMarkers.set(num, marker);
     };
     addPin(0, pm.clubMed, '★', `<strong>Club Med Valmorel</strong><br>Approximate position. The map doesn't show the resort.`, true);
@@ -742,6 +792,38 @@
       const html = `<strong>${x.pisteNum}. ${esc(x.name)}</strong><br>${esc(x.why)}<br><em>${esc(PASS_LABEL[x.pass] || '')}</em>`;
       x.pistePins.forEach((p) => addPin(x.pisteNum, p, String(x.pisteNum), html, false));
     });
+    showPisteDay();
+  }
+
+  function showPisteDay() {
+    if (!pisteMap || !pisteRouteLayer) return;
+    const pm = trip.pisteMap;
+    const toLatLng = ([x, y]) => [pm.height - y, x];
+    pisteRouteLayer.clearLayers();
+    pisteLegs = [];
+    const day = trip.mapDays.find((m) => m.id === mapState.day);
+    const legs = day && day.route && window.MOUNTAIN ? window.MOUNTAIN.pisteRoutes[day.route] : null;
+    if (!legs) {
+      if (!pisteMap.hasLayer(pistePinLayer)) pistePinLayer.addTo(pisteMap);
+      return;
+    }
+    pisteMap.removeLayer(pistePinLayer);
+    legs.forEach((leg, i) => {
+      const pts = leg.p.map(toLatLng);
+      if (leg.k === 'ride') L.polyline(pts, { color: '#ffffff', weight: 8, opacity: 0.95 }).addTo(pisteRouteLayer);
+      pisteLegs[i] = L.polyline(pts, { color: leg.k === 'lift' ? '#14213d' : '#ff6a00', weight: leg.k === 'lift' ? 6 : 4.5, opacity: 1 }).addTo(pisteRouteLayer);
+      if (leg.home) L.polyline(leg.home.map(toLatLng), { color: '#ff6a00', weight: 4, dashArray: '4 8' }).addTo(pisteRouteLayer);
+      L.marker(pts[0], {
+        icon: L.divIcon({ className: '', html: `<span class="map-step">${i + 1}</span>`, iconSize: [26, 26], iconAnchor: [13, 13] }),
+        zIndexOffset: 400 + i,
+      }).addTo(pisteRouteLayer);
+    });
+    L.marker(toLatLng(pm.clubMed), {
+      icon: L.divIcon({ className: '', html: '<span class="piste-num piste-star">★</span>', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      zIndexOffset: 300,
+    }).addTo(pisteRouteLayer).bindPopup('<strong>Club Med Valmorel</strong><br>Approximate position.');
+    const bounds = L.latLngBounds(pisteLegs.flatMap((l) => l.getLatLngs()));
+    pisteMap.fitBounds(bounds, { padding: [24, 24] });
   }
 
   function watchPisteMap() {
@@ -760,6 +842,7 @@
 
   function focusPiste(num) {
     initPisteMap();
+    if (mapState.day !== 'all') showMapDay('all');
     document.getElementById('piste-map').scrollIntoView({ behavior: 'smooth', block: 'center' });
     const marker = pisteMarkers.get(num);
     if (!pisteMap || !marker) return;
@@ -772,6 +855,7 @@
     const rows = (items) => `<ul class="pay-list">${items.map((i) => `<li>
       <strong>${esc(i.title)}</strong>
       <span class="muted">${esc(i.detail)}${i.phone ? ` <a href="tel:${esc(i.phone)}">${esc(i.phoneLabel)}</a>` : ''}</span>
+      ${i.lat ? mapButton(i.lat, i.lon, i.title) : ''}
     </li>`).join('')}</ul>`;
     return `<section id="evenings" class="jump-target">
       <h2 class="section-title">Evenings and nights</h2>
@@ -808,6 +892,7 @@
     renderExploreResults();
     initMap();
     watchPisteMap();
+    setTimeout(applyMapFocus, 0);
   }
 
   function renderExploreResults() {
@@ -846,7 +931,7 @@
             <div class="card-actions">
               <button class="chip" aria-pressed="${fav}" data-action="toggle-list" data-list="favs" data-name="${esc(a.name)}">${fav ? 'Saved' : 'Save'}</button>
               <button class="chip" aria-pressed="${seen}" data-action="toggle-list" data-list="visited" data-name="${esc(a.name)}">${seen ? 'Done' : 'Mark done'}</button>
-              <button class="chip" data-action="map-focus" data-lat="${a.lat}" data-lon="${a.lon}">On the map</button>
+              ${mapButton(a.lat, a.lon, a.name)}
               ${a.pistePins ? `<button class="chip" data-action="piste-focus" data-num="${a.pisteNum}">Piste map #${a.pisteNum}</button>` : ''}
               <a class="chip" href="${esc(mapsUrl(a.q))}" target="_blank" rel="noopener">Maps</a>
             </div>
@@ -862,7 +947,7 @@
 
       <section>
         <h2 class="section-title">Last lifts back</h2>
-        <ul class="map-warn">${m.lastLifts.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
+        <ul class="map-warn">${m.lastLifts.map((w) => `<li>${esc(w.text)}${w.lat ? ` ${mapButton(w.lat, w.lon, w.label)}` : ''}</li>`).join('')}</ul>
         <p class="muted small">From the 2025-26 piste map. Times are subject to change.</p>
       </section>
 
@@ -881,7 +966,7 @@
         <h2 class="section-title">Valmorel on a snowboard</h2>
         <p class="muted lede">From resort guides of varying age. One guest's Tripadvisor review is titled "Snowboarding trip was fantastic", so opinions differ.</p>
         <ul class="pay-list">
-          ${m.board.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span></li>`).join('')}
+          ${m.board.map((l) => `<li><strong>${esc(l.title)}</strong><span class="muted">${esc(l.detail)}</span>${l.lat ? mapButton(l.lat, l.lon, l.title) : ''}</li>`).join('')}
         </ul>
       </section>
 
@@ -1340,10 +1425,14 @@
     } else if (action === 'map-this-day') {
       mapState.day = trip.mapDays.find((m) => m.date === el.dataset.date).id;
       location.hash = '#explore';
-    } else if (action === 'map-focus') {
-      if (mapState.day !== 'all') showMapDay('all');
-      if (map) map.setView([Number(el.dataset.lat), Number(el.dataset.lon)], 14);
-      document.getElementById('map-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'go-map') {
+      goToMap(Number(el.dataset.lat), Number(el.dataset.lon), el.dataset.label);
+    } else if (action === 'piste-leg') {
+      const line = pisteLegs[Number(el.dataset.index)];
+      if (line && pisteMap) {
+        pisteMap.fitBounds(line.getBounds(), { padding: [50, 50], maxZoom: 0 });
+        document.getElementById('piste-map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     } else if (action === 'map-fit') {
       fitMap(el.dataset.fit);
     } else if (action === 'explore') {

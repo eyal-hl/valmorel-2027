@@ -75,6 +75,7 @@ window.TRIP = {
   lessons: {
     summary: "Your stay includes 25 hours of group snowboard lessons over 5 days, Monday to Friday. Club Med says lessons run twice a day, morning and afternoon, which works out at about 5 hours a day. You don't have to take them.",
     facts: [
+      ['Your group', 'You rate yourselves level 1 to 2, so expect a Class 1 or Class 2 group. Instructors have the final say. Tell them you already ride reds.'],
       ['Teachers', "Certified instructors from ESF, France's national ski and snowboard school"],
       ['Group size', 'About 12 people at a similar level, or up to 8 in expert groups'],
       ['Progress', 'Club Med says lessons move from carving to powder as your level improves'],
@@ -120,7 +121,7 @@ window.TRIP = {
     { title: 'Snowboard rental', detail: 'Order in advance or at the rental shop once you arrive. Club Med offers several ranges, matched to your level.' },
     { title: 'Spa treatments', detail: 'Club Med Spa by Sothys. Massages and facials, with multi-massage after-ski packages. An agency listing says 18+ and pre-booking required.' },
     { title: 'Private snowboard lessons', detail: 'Book on site or in advance, including for Saturday. ESF Valmorel advertises 1.5 hours from €90 and half or full days with an instructor from €250. Prices through Club Med may differ.' },
-    { title: 'Cross-country skiing', detail: 'Bookable in resort, if you fancy a day off the board.' },
+    { title: 'Cross-country skiing', detail: 'Bookable in resort, if you fancy a day off the board. The Nâves Nordic area is down the valley, reached by car or bus.', lat: 45.553, lon: 6.5316 },
     { title: 'Snowmobile outing', detail: 'Bookable in resort.' },
     { title: 'Ice-fall climbing', detail: 'Bookable in resort.' },
   ],
@@ -187,11 +188,11 @@ window.TRIP = {
     ] },
     { date: '2027-01-29', title: 'Day trip or back on the snow', items: [
       { when: 'All day', at: '09:00', type: 'sight', status: 'idea', title: 'Conflans and Albertville', detail: 'A medieval village and the 1992 Olympics. You will need a car or taxi.' },
-      { when: 'Or', at: '09:01', type: 'ski', status: 'idea', title: 'Last group lesson, then the Doucy side', detail: 'Doucy needs a drag lift and a red run back, so it suits confident riders' },
+      { when: 'Or', at: '09:01', type: 'ski', status: 'idea', title: 'Last group lesson, then the Doucy side', detail: 'The route includes a drag lift and a red run on the way back' },
       { when: '17:30', at: '17:30', type: 'sight', status: 'idea', title: 'Snow skate session', detail: 'Your second chance this week, 17:30 to 18:15 last season' },
     ] },
     { date: '2027-01-30', title: 'Park day', items: [
-      { when: 'All day', at: '09:00', type: 'ski', status: 'idea', title: 'Pirates Snowpark and boardercross', detail: 'Take the Biollène chairlift. The beginner line has features just 20 cm high. No lessons today, and no drag lift is needed.' },
+      { when: 'All day', at: '09:00', type: 'ski', status: 'idea', title: 'Pirates Snowpark and boardercross', detail: 'Take the Biollène chairlift. The beginner line has features just 20 cm high. Or head up to the Col du Mottet for a long red run. No lessons today.' },
       { when: 'Evening', type: 'note', status: 'idea', title: 'Return rentals and pack', detail: 'Check-out is early tomorrow' },
     ] },
     { date: '2027-01-31', title: 'Heading home', items: [
@@ -205,7 +206,7 @@ window.TRIP = {
       { name: 'Club Med Valmorel', lat: 45.4561, lon: 6.444, note: 'Check in from about 15:00' },
       { name: 'Le Bourg', lat: 45.4611, lon: 6.4424, note: 'Village centre, a short Valmobus ride away' },
     ] },
-    { id: 'mon25', date: '2027-01-25', label: 'Mon 25', title: 'First day', pass: true, route: 'pierrafort', blurb: 'Complete beginners should stay on the carpets by Club Med. If you can link turns, try this loop in the free time around your lessons.', lead: 'The Pierrafort gondola is about 350 m from Club Med. Ask at the resort for the easiest way there.', stops: [
+    { id: 'mon25', date: '2027-01-25', label: 'Mon 25', title: 'First day', pass: true, route: 'pierrafort', blurb: 'Lessons come first today. In your free time, this blue loop is a good warm-up. The carpets by Club Med are there if you want a gentle start.', lead: 'The Pierrafort gondola is about 350 m from Club Med. Ask at the resort for the easiest way there.', stops: [
       { name: 'Club Med beginner carpets', lat: 45.4563, lon: 6.4433, note: 'For your first turns, right at the resort' },
       { name: 'Bois de la Croix', lat: 45.4583, lon: 6.4441, note: 'Beginner area with a carpet and the small Cheval Blanc drag lift' },
     ] },
@@ -225,9 +226,12 @@ window.TRIP = {
       { name: 'Cité de Conflans', lat: 45.6737, lon: 6.3985, note: 'About 40 min by car' },
       { name: 'Albertville Olympic sites', lat: 45.6613, lon: 6.3731, note: 'Close to Conflans' },
     ] },
-    { id: 'fri29b', date: '2027-01-29', label: 'Fri option', title: 'The Doucy side', pass: true, route: 'doucy', blurb: 'An alternative to the day trip, for confident riders.', lead: 'Take the Valmobus line 1 from Club Med to the Lanchettes stop, about 10 minutes.', warn: ['This route needs the Montolivet drag lift.', 'The way back includes Les Lanchettes, shown as a red run.'], stops: [] },
+    { id: 'fri29b', date: '2027-01-29', label: 'Fri option', title: 'The Doucy side', pass: true, route: 'doucy', blurb: 'An alternative to the day trip, with a red run on the way back.', lead: 'Take the Valmobus line 1 from Club Med to the Lanchettes stop, about 10 minutes.', warn: ['This route needs the Montolivet drag lift, the hardest lift type on a board.'], stops: [] },
     { id: 'sat30', date: '2027-01-30', label: 'Sat 30', title: 'Park day', pass: true, route: 'park', blurb: 'Your last day on the lift pass, with no drag lifts needed.', lead: 'Take the Valmobus line 1 from Club Med to the Planchamp stop, about 6 minutes.', warn: ['The park is at the top of the Biollène chairlift. Check it is open on the live piste map.'], stops: [
       { name: 'Pirates Snowpark and boardercross', lat: 45.4439, lon: 6.4148, note: 'Top of the Biollène chairlift' },
+    ] },
+    { id: 'sat30b', date: '2027-01-30', label: 'Sat option', title: 'Up to the Col du Mottet', pass: true, route: 'mottet', blurb: 'The highest point on the Valmorel side at 2,403 m, with a long red run back down. Good on a clear day, and there is a photopoint at the top.', lead: 'The Pierrafort gondola is about 350 m from Club Med. Ask at the resort for the easiest way there.', warn: ['Col du Mottet and Combe du Mottet are red runs. Check the wind and that the chairlift is open first.'], stops: [
+      { name: 'Col du Mottet photopoint', lat: 45.4289, lon: 6.4334, note: 'At the top of the Mottet chairlift, 2,403 m' },
     ] },
     { id: 'sun31', date: '2027-01-31', label: 'Sun 31', title: 'Going home', pass: false, idea: false, blurb: 'No lift pass today. Check out at about 10:00.', stops: [
       { name: 'Club Med Valmorel', lat: 45.4561, lon: 6.444, note: 'Check out, then your Club Med transfer' },
@@ -249,7 +253,7 @@ window.TRIP = {
     { name: 'Pirates Snowpark and boardercross', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 5, pistePins: [[1370,787]], pass: 'covered', lat: 45.4439, lon: 6.4148, q: 'Pirates Snowpark Valmorel', why: 'The park has a beginner line with features just 20 cm high, plus intermediate and expert lines. The boardercross next to it is rated blue.', tip: 'At the top of the Biollène chairlift. Check the live piste map to see if it is open.' },
     { name: 'Charmettes boardercross', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 6, pistePins: [[850,1262]], pass: 'covered', lat: 45.4709, lon: 6.4279, q: 'Boardercross des Charmettes Doucy', why: 'A second, blue-level boardercross in the Doucy sector.', tip: 'Reached with the Charmettes drag lift. Pin position is approximate.' },
     { name: 'Beginner areas', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 7, pistePins: [[395,1012],[1270,841],[878,708],[820,1407]], pass: 'covered', lat: 45.4583, lon: 6.4441, q: 'Bois de la Croix Valmorel', why: 'Four areas for learning: Bois de la Croix by the resort, Beaudin at the top of Planchamp, Malatrai at the top of Pierrafort, and Échappeaux-Charmettes in Doucy.', tip: 'Club Med also has its own beginner carpets on site.' },
-    { name: 'Freeride runs', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 8, pistePins: [[570,632],[1100,372],[1670,472],[2017,817]], pass: 'covered', lat: 45.4337, lon: 6.4216, q: 'Freeride du Riondet Valmorel', why: 'Four secured but ungroomed red and black runs: Gollet, Riondet, Mottet and Procureuse.', tip: 'For confident riders. Check the avalanche risk first.' },
+    { name: 'Freeride runs', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 8, pistePins: [[570,632],[1100,372],[1670,472],[2017,817]], pass: 'covered', lat: 45.4337, lon: 6.4216, q: 'Freeride du Riondet Valmorel', why: 'Four secured but ungroomed red and black runs: Gollet, Riondet, Mottet and Procureuse.', tip: 'Ungroomed, so harder than a normal red. Save these for later in the week, and check the avalanche risk first.' },
     { name: 'Photopoints', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 9, pistePins: [[1220,397],[1530,587]], pass: 'covered', lat: 45.4289, lon: 6.4334, q: 'Col du Mottet Valmorel', why: 'Automatic cameras at the top of the Biollène and Mottet chairlifts that take your picture.', tip: 'The Col du Mottet is the top of the area at 2,403 m.' },
     { name: 'Zip line', area: 'resort', type: 'Paid activities', onPiste: true, pisteNum: 10, pistePins: [[965,817]], pass: 'extra', lat: 45.4487, lon: 6.4242, q: 'Tyrolienne Valmorel Planchamp', why: 'A 1,400 m double zip line across the valley from the top of the Planchamp gondola. Snowboarders are welcome.', tip: 'Book at magicadventure.org, or on site if there is space.' },
     { name: 'Snowtubing', area: 'resort', type: 'Paid activities', onPiste: true, pisteNum: 11, pistePins: [[1410,1431]], pass: 'extra', lat: 45.4495, lon: 6.4243, q: 'Snowtubing Planchamp Valmorel', why: 'Slide down a dedicated slope on an inflatable tube, at the top of the Planchamp gondola.', tip: 'Wednesday to Sunday, 11:00 to 16:00 last season, with 30-minute tickets.' },
@@ -262,7 +266,7 @@ window.TRIP = {
     { name: 'Savoyard dinner', area: 'resort', type: 'Village', onPiste: false, pass: 'none', lat: 45.4606, lon: 6.4418, q: 'restaurants Valmorel', why: 'Tartiflette, fondue, raclette and a glass of génépi to finish.', tip: 'Meals are included at the resort, so make this your one night out.' },
     { name: 'Snowshoeing', area: 'resort', type: 'Off the slopes', onPiste: true, pisteNum: 18, pistePins: [[1292,1012]], pass: 'none', lat: 45.4585, lon: 6.4495, q: 'Valmorel snowshoeing', why: 'Quiet forest trails away from the lifts. Club Med includes the snowshoes.', tip: 'Local guided trips run from Valmorel too.' },
     { name: 'Piscine du Morel', area: 'resort', type: 'Off the slopes', onPiste: false, pass: 'none', lat: 45.5096, lon: 6.4925, q: 'Piscine du Morel Aigueblanche', why: 'Year-round pool complex with a 25 m indoor pool, a giant slide and a sauna.', tip: 'About 20 minutes by car down the valley.' },
-    { name: 'Dog sledding', area: 'resort', type: 'Off the slopes', onPiste: false, pass: 'extra', lat: 45.4632, lon: 6.4395, q: 'Valmorel dog sledding', why: 'Run by Escapades Nordiques, meeting at the Aigle Blanc area. Try a ride or drive your own team.', tip: 'Book through escapadesnordiques.fr. Pin position is approximate.' },
+    { name: 'Dog sledding', area: 'resort', type: 'Off the slopes', onPiste: false, pass: 'extra', lat: 45.4728, lon: 6.4641, q: 'Valmorel dog sledding', why: 'Run by Escapades Nordiques, meeting at the Aigle Blanc area. Try a ride or drive your own team.', tip: 'Book through escapadesnordiques.fr. The free Valmobus shuttle stops at L\'Aigle Blanc.' },
     { name: 'Brides-les-Bains', area: 'region', type: 'Day trip', onPiste: false, pass: 'none', lat: 45.4525, lon: 6.5668, q: 'Brides-les-Bains', why: 'A small spa town in the next valley, known for its thermal waters.', tip: 'About 30 min by car. Check winter opening hours for the spa.' },
     { name: 'Cité de Conflans', area: 'region', type: 'Day trip', onPiste: false, pass: 'none', lat: 45.6737, lon: 6.3985, q: 'Cité médiévale de Conflans Albertville', why: 'A walled medieval village above Albertville, with big views from the ramparts.', tip: 'About 40 min by car. Can be paired with the Olympic sites.' },
     { name: 'Albertville Olympic sites', area: 'region', type: 'Day trip', onPiste: false, pass: 'none', lat: 45.6613, lon: 6.3731, q: 'Maison des Jeux Olympiques Albertville', why: 'The legacy of the 1992 Winter Games: a museum and the Halle Olympique arena.', tip: 'Reviews of the museum are mixed, so treat it as a short stop.' },
@@ -281,9 +285,9 @@ window.TRIP = {
   ],
   mountain: {
     lastLifts: [
-      'To get back to Valmorel: be on the Frêne chairlift before 16:00.',
-      'To get back to Saint-François-Longchamp: be on the Madeleine chairlift before 15:50.',
-      'If you miss the connection, you must make your own way back at your own expense.',
+      { text: 'To get back to Valmorel: be on the Frêne chairlift before 16:00.', label: 'Frêne chairlift', lat: 45.4231, lon: 6.3749 },
+      { text: 'To get back to Saint-François-Longchamp: be on the Madeleine chairlift before 15:50.', label: 'Madeleine chairlift', lat: 45.4494, lon: 6.3987 },
+      { text: 'If you miss the connection, you must make your own way back at your own expense.' },
     ],
     links: [
       { title: 'Live piste map', detail: 'Which lifts and pistes are open now, plus today\'s avalanche risk. Everything shows as closed outside opening hours.', url: 'https://skipass.valmorel.com/en/plan-des-pistes' },
@@ -298,8 +302,8 @@ window.TRIP = {
     board: [
       { title: 'Lots of drag lifts, but you can avoid many', detail: 'Drag lifts make up a large share of the lifts here. The routes on the day-by-day map use gondolas and chairlifts wherever possible, and each one says if a drag lift is needed.' },
       { title: 'Mostly easy pistes', detail: 'Guides put most of the area at beginner level, which suits learning. One snowboard guide rates it just 4 out of 10 and calls the slopes easy but dull, so strong riders may want more.' },
-      { title: 'A park and two boardercross courses', detail: 'The Pirates Snowpark has a beginner line with features just 20 cm high, plus intermediate and expert lines. The boardercross courses are at Biollène and in the Doucy area.' },
-      { title: 'Some trees and off-piste', detail: 'The same guide mentions a few tree runs and some decent off-piste. Check the avalanche risk first and ask the ski patrol before leaving the pistes.' },
+      { title: 'A park and two boardercross courses', detail: 'The Pirates Snowpark has a beginner line with features just 20 cm high, plus intermediate and expert lines. The boardercross courses are at Biollène and in the Doucy area.', lat: 45.4439, lon: 6.4148 },
+      { title: 'Some trees and off-piste', detail: 'The same guide mentions a few tree runs and some decent off-piste. Check the avalanche risk first and ask the ski patrol before leaving the pistes.', lat: 45.4337, lon: 6.4216 },
     ],
     tips: [
       { title: 'Know your stance', detail: 'Find out if you ride regular (left foot forward) or goofy (right foot forward) before you collect a rental board.' },
@@ -356,9 +360,9 @@ window.TRIP = {
       { title: 'Floodlit toboggan run', detail: 'In the resort centre, lit from 18:00 to 21:30. Bring or rent a toboggan.' },
       { title: 'Le Studio cinema', detail: 'Screenings at 18:00 and 21:00. Most films are probably in French, though some are in the original language.', phone: '+33479098120', phoneLabel: 'Call the cinema' },
       { title: "Trappers' evening", detail: 'A guided headlamp snowshoe walk with ESF, 17:45 to 20:00, on request.' },
-      { title: 'End-of-day rides', detail: 'Mountain kart, snake gliss and Yooner descents with ESF, at 16:45 from the top of the Pierrafort gondola.' },
+      { title: 'End-of-day rides', detail: 'Mountain kart, snake gliss and Yooner descents with ESF, at 16:45 from the top of the Pierrafort gondola.', lat: 45.4427, lon: 6.441 },
       { title: 'Electric snow scooter', detail: 'Wednesdays, 18:00 to 19:45, by headlamp. Ages 14 and up.' },
-      { title: 'Stargazing', detail: "L'Écho des Étoiles offers telescope sessions with an astronomer at Doucy-Le Villaret, about 20 minutes away.", phone: '+33766687930', phoneLabel: 'Call to book' },
+      { title: 'Stargazing', detail: "L'Écho des Étoiles offers telescope sessions with an astronomer at Doucy-Le Villaret, about 20 minutes away.", phone: '+33766687930', phoneLabel: 'Call to book', lat: 45.4863, lon: 6.4551 },
       { title: 'Gourmet torchlight walk', detail: 'A guided walk through Valmorel at nightfall, with a fondue tasting. Book at the tourist office.', phone: '+33479098555', phoneLabel: 'Call the tourist office' },
       { title: 'Indoor games', detail: 'Golf simulator and multi-sport games, next to the medical centre.' },
     ],

@@ -589,3 +589,11 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 .piste-star { background: #14213d; font-size: 15px; }
 .piste-key { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 16px; }
 .piste-key .leg { flex-direction: row; align-items: center; gap: 10px; min-height: 42px; padding: 4px 0; }
+
+/* Routes on the piste map and map buttons */
+.piste-steps { margin-top: 12px; }
+.piste-steps:empty { display: none; }
+#piste-section .day-chips { margin-bottom: 10px; }
+.map-btn { align-self: flex-start; min-height: 36px; padding: 0 12px; margin-top: 6px; font-size: 13px; }
+.map-warn .map-btn { display: inline-flex; margin: 4px 0 0; background: #fffdf8; color: #14213d; }
+.map-focus { display: block; width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; background: #c8102e; box-shadow: 0 1px 4px rgb(0 0 0 / 50%); transform: rotate(-45deg); }
