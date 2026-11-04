@@ -503,3 +503,69 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 #evenings .sub-title + .muted { margin-bottom: 10px; }
 #evenings .pay-list a { white-space: nowrap; }
 .jump-target { scroll-margin-top: 12px; }
+
+/* Food */
+.food-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 10px; }
+.food-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.food-card.is-tried { border-top: 4px solid #1e6b4c; }
+.food-card h2 { font-size: 22px; }
+.food-rate { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.stars { display: flex; }
+.star { width: 40px; height: 44px; padding: 0; border: 0; background: none; color: var(--line); font-size: 28px; line-height: 1; cursor: pointer; }
+.star.on { color: #d9941c; }
+.food-note { width: 100%; min-height: 60px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: 16px var(--sans); resize: vertical; }
+.food-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.food-photos:empty { display: none; }
+.food-thumb { width: 84px; height: 84px; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: var(--line); cursor: pointer; }
+.food-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-add { position: relative; }
+.photo-add:focus-within { outline: 2px solid var(--bleu); outline-offset: 2px; }
+.food-status:empty { display: none; }
+.photo-viewer { max-width: min(94vw, 760px); padding: 10px; border: 0; border-radius: 12px; background: var(--card); color: var(--ink); }
+.photo-viewer::backdrop { background: rgb(0 0 0 / 80%); }
+.photo-viewer img { display: block; max-width: 100%; max-height: 72vh; margin: 0 auto 8px; border-radius: 8px; }
+.view .chips + .food-list { margin-top: 0; }
+@media (max-width: 719px) {
+  .nav a { font-size: 12px; }
+}
+
+/* Day-by-day map */
+.map-section { scroll-margin-top: 12px; }
+.map-section .day-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.day-chips .chip { flex: none; }
+.map-section .map { height: min(52vh, 520px); }
+.line-key { display: inline-block; width: 18px; border-top: 2px dashed #14213d; }
+.route-key { border-top: 4px solid #ff6a00; }
+.map-step {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ff6a00;
+  color: #fff;
+  border: 2px solid #fff;
+  font: 700 13px var(--sans);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+}
+.day-panel { margin-top: 14px; }
+.day-panel > .sub-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 0; }
+.day-panel > * + * { margin-top: 8px; }
+.map-warn { margin: 8px 0; padding: 10px 12px 10px 28px; background: #fff3c4; color: #4a3b00; border-radius: 8px; }
+.map-warn li { padding: 2px 0; }
+.route-steps li { padding-bottom: 6px; }
+.route-steps li::before { top: 6px; background: #ff6a00; color: #fff; }
+.leg { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: 6px 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.run-names { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 14px; color: var(--muted); }
+.run-names span { display: inline-flex; align-items: center; gap: 5px; }
+.run-names .dot { width: 10px; height: 10px; flex: none; }
+.card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
+.map-this-day { margin-top: 8px; }
+.pass-groups { margin-top: 12px; margin-bottom: 8px; }
+.not-covered { border-top-color: var(--rouge); }
+.no-list li::before { content: "✕"; color: var(--rouge); }
+.local-numbers li { flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+.local-numbers a { font-variant-numeric: tabular-nums; }
+@media (prefers-color-scheme: dark) {
+  .map-warn { background: #4a3b00; color: #fff3c4; }
+}

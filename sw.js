@@ -10,6 +10,7 @@ const ASSETS = [
   'css/styles.css',
   'js/app.js',
   'js/trip-data.js',
+  'js/mountain-data.js',
   'vendor/leaflet/leaflet.js',
   'vendor/leaflet/leaflet.css',
   'icons/icon-180.png',
