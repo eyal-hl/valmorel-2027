@@ -551,7 +551,7 @@
 
   function foodHtml() {
     const tried = load('tried', []);
-    return `<section>
+    return `<section id="food" class="jump-target">
       <h2 class="section-title">Savoyard food to try <span class="muted small" id="food-count">${trip.food.filter((f) => tried.includes(f.id)).length} of ${trip.food.length} tried</span></h2>
       <div class="todos">
         ${trip.food.map((f) => `<label class="check todo">
@@ -562,13 +562,38 @@
     </section>`;
   }
 
+  function eveningsHtml() {
+    const { evenings } = trip;
+    const rows = (items) => `<ul class="pay-list">${items.map((i) => `<li>
+      <strong>${esc(i.title)}</strong>
+      <span class="muted">${esc(i.detail)}${i.phone ? ` <a href="tel:${esc(i.phone)}">${esc(i.phoneLabel)}</a>` : ''}</span>
+    </li>`).join('')}</ul>`;
+    return `<section id="evenings" class="jump-target">
+      <h2 class="section-title">Evenings and nights</h2>
+      <p class="muted lede">${esc(evenings.note)}</p>
+      <h3 class="sub-title">At Club Med <span class="badge status-booked">Included</span></h3>
+      ${rows(evenings.clubMed)}
+      <h3 class="sub-title">In Valmorel village <span class="badge status-idea">Pay as you go</span></h3>
+      <p class="muted">${esc(evenings.gettingThere)}</p>
+      ${rows(evenings.village)}
+      <h3 class="sub-title">Probably not on your week</h3>
+      ${rows(evenings.unlikely)}
+    </section>`;
+  }
+
   function renderExplore() {
     view.innerHTML = `<h1 class="page-title">Explore</h1>
+      <div class="chips" role="group" aria-label="Jump to">
+        <button class="chip" data-action="jump" data-target="things">Things to do</button>
+        <button class="chip" data-action="jump" data-target="evenings">Evenings</button>
+        <button class="chip" data-action="jump" data-target="food">Food</button>
+      </div>
       ${mapHtml()}
-      <section>
+      <section id="things" class="jump-target">
         <h2 class="section-title">Things to do</h2>
         <div id="explore-results"></div>
       </section>
+      ${eveningsHtml()}
       ${foodHtml()}`;
     renderExploreResults();
     initMap();
@@ -802,6 +827,8 @@
     if (action === 'jump-today') {
       const target = document.getElementById(`day-${today()}`);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'jump') {
+      document.getElementById(el.dataset.target).scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (action === 'calendar') {
       downloadCalendar();
     } else if (action === 'copy-journal') {

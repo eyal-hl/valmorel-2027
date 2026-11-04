@@ -250,6 +250,30 @@ window.TRIP = {
       { title: 'No phone or signal?', detail: 'Ask another skier to go to the nearest lift and tell the staff. You can also try 112, which is free and works around the clock.' },
     ],
   },
+  evenings: {
+    note: "Bar and restaurant details come mostly from guides that may be out of date. Ask the Club Med desk or the tourist office what's on that week.",
+    clubMed: [
+      { title: 'Après-ski drinks', detail: 'Apéritifs with live music as you come off the slopes. Older guides name Le Roc Bar as the main bar.' },
+      { title: 'Dinner', detail: 'The buffet changes daily. One reviewer also liked La Laiterie, an à la carte restaurant included in the stay. Ask whether you need to book.' },
+      { title: 'Shows', detail: 'Entertainment every night, such as live bands, singers, dancers and acrobats. One review calls it family-style, and says you can watch from the bar at the back.' },
+      { title: 'Late night', detail: 'DJ sets and dancing. One older source says the dancing can go on into the early hours.' },
+      { title: 'Quieter options', detail: 'The indoor pool, or a spa treatment at extra cost. Check the evening hours for both.' },
+    ],
+    village: [
+      { title: 'Jimbo Lolo', detail: 'Lively bar with Tex-Mex food, tequila, karaoke and dance parties.' },
+      { title: 'Les Clarines', detail: 'Savoyard food, a 5 to 7 pm happy hour and karaoke on Mondays, at the bottom of the Rocher piste.' },
+      { title: 'La Cordée', detail: 'At the bottom of the pistes, recommended for cocktails.' },
+      { title: 'Savoyard dinner', detail: 'Guides name Le Petit Savoyard, La Marmite and Le Chalet du Mottet.' },
+      { title: 'Le Studio cinema', detail: 'Open 19 December to 10 April, with screenings at 18:00 and 21:00. Most films are probably in French, though some are in the original language.', phone: '+33479098120', phoneLabel: 'Call the cinema' },
+      { title: 'Late-night clubs', detail: 'Guides mention Sound Pub & Club and L\'Albi, but these are older sources, so check they still operate.' },
+      { title: 'Evening snowshoe dinner', detail: 'One guide mentions a guided walk to the Aigle Blanc, a forest restaurant. Ask the tourist office if it still runs.' },
+    ],
+    gettingThere: 'The village is about 2 km by road from Club Med. Ask at reception about a shuttle or a safe walking route at night.',
+    unlikely: [
+      { title: 'Ski Show with fireworks', detail: 'Runs on Tuesday evenings during school holidays, and your dates probably fall outside the French ones.' },
+      { title: 'ESF night-time ski session', detail: 'Advertised for February and aimed at beginners.' },
+    ],
+  },
   food: [
     { id: 'tartiflette', name: 'Tartiflette', what: 'Baked potatoes, onions and melted Reblochon cheese, usually with bacon.' },
     { id: 'fondue', name: 'Fondue savoyarde', what: 'Bread dipped in melted Alpine cheeses and white wine.' },

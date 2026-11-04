@@ -500,3 +500,9 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 .rules { margin: 0; padding-left: 26px; }
 .rules li { padding: 5px 0; }
 .say { min-height: 36px; padding: 0 12px; margin-top: 6px; font-size: 13px; }
+
+/* Evenings */
+#evenings .sub-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#evenings .sub-title + .muted { margin-bottom: 10px; }
+#evenings .pay-list a { white-space: nowrap; }
+.jump-target { scroll-margin-top: 12px; }
