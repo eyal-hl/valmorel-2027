@@ -569,3 +569,23 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 @media (prefers-color-scheme: dark) {
   .map-warn { background: #4a3b00; color: #fff3c4; }
 }
+
+/* Official piste map */
+.piste-map { height: min(56vh, 560px); border: 1px solid var(--line); border-radius: 12px; background: #dfe8f5; z-index: 0; }
+.piste-links { margin-top: 10px; }
+.piste-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #c8102e;
+  color: #fff;
+  font: 700 13px var(--sans);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+}
+.piste-star { background: #14213d; font-size: 15px; }
+.piste-key { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 16px; }
+.piste-key .leg { flex-direction: row; align-items: center; gap: 10px; min-height: 42px; padding: 4px 0; }

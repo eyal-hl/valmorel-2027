@@ -68,6 +68,7 @@
   function route() {
     if (ticker) { clearInterval(ticker); ticker = null; }
     if (map) { map.remove(); map = null; overlay = null; }
+    removePisteMap();
     const tab = currentTab();
     document.getElementById('nav').innerHTML = TABS
       .map(([id, label]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ''}>${label}</a>`)
@@ -669,6 +670,103 @@
   const exploreState = { type: 'All', show: 'all' };
   const TYPES = ['All', ...new Set(trip.attractions.map((a) => a.type))];
 
+  let pisteMap = null;
+  let pisteObserver = null;
+  const pisteMarkers = new Map();
+
+  function removePisteMap() {
+    if (pisteObserver) { pisteObserver.disconnect(); pisteObserver = null; }
+    if (pisteMap) { pisteMap.remove(); pisteMap = null; }
+    pisteMarkers.clear();
+  }
+
+  function pisteMapHtml() {
+    const pm = trip.pisteMap;
+    const pinned = trip.attractions.filter((x) => x.pistePins).sort((x, y) => x.pisteNum - y.pisteNum);
+    const offMap = trip.attractions.filter((x) => !x.pistePins);
+    return `<section id="piste-section" class="jump-target">
+      <h2 class="section-title">On the official piste map</h2>
+      <p class="muted lede">Everything from this page that appears on Valmorel's 2025-26 piste map. Swipe across and pinch to zoom, then tap a number. Some positions are approximate, and the star for Club Med is my estimate because the map doesn't show it.</p>
+      <div id="piste-map" class="piste-map"></div>
+      <div class="card-actions piste-links">
+        <a class="chip" href="${esc(pm.marked)}" target="_blank" rel="noopener">Open marked image</a>
+        <a class="chip" href="${esc(pm.pdf)}" target="_blank" rel="noopener">Valmorel's PDF</a>
+      </div>
+      <h3 class="sub-title">Key</h3>
+      <ol class="piste-key">
+        <li><button class="leg" data-action="piste-focus" data-num="0"><span class="piste-num piste-star">★</span><span>Club Med (approximate)</span></button></li>
+        ${pinned.map((x) => `<li><button class="leg" data-action="piste-focus" data-num="${x.pisteNum}"><span class="piste-num">${x.pisteNum}</span><span>${esc(x.name)}</span></button></li>`).join('')}
+      </ol>
+      <h3 class="sub-title">Not on this map</h3>
+      <p class="muted">${esc(offMap.map((x) => x.name).join(', '))}.</p>
+    </section>`;
+  }
+
+  function initPisteMap() {
+    const holder = document.getElementById('piste-map');
+    if (!holder || pisteMap) return;
+    if (!window.L) {
+      holder.innerHTML = '<p class="muted map-fallback">The map could not load.</p>';
+      return;
+    }
+    const pm = trip.pisteMap;
+    const bounds = [[0, 0], [pm.height, pm.width]];
+    const toLatLng = ([x, y]) => [pm.height - y, x];
+    pisteMap = L.map(holder, {
+      crs: L.CRS.Simple,
+      minZoom: -3,
+      maxZoom: 1,
+      zoomSnap: 0,
+      scrollWheelZoom: false,
+      attributionControl: true,
+      maxBoundsViscosity: 0.8,
+    });
+    pisteMap.attributionControl.setPrefix(false);
+    L.imageOverlay(pm.image, bounds, { attribution: 'Piste map © Valmorel' }).addTo(pisteMap);
+    // Fill the box rather than fitting the whole map, so numbers stay readable on a phone.
+    const fillZoom = Math.log2(Math.max(holder.clientWidth / pm.width, holder.clientHeight / pm.height));
+    pisteMap.setMinZoom(fillZoom);
+    pisteMap.setMaxBounds(bounds);
+    pisteMap.setView(toLatLng([850, pm.height / 2]), fillZoom);
+
+    const addPin = (num, at, label, html, isStar) => {
+      const marker = L.marker(toLatLng(at), {
+        icon: L.divIcon({ className: '', html: `<span class="piste-num ${isStar ? 'piste-star' : ''}">${label}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }),
+        zIndexOffset: isStar ? 500 : 0,
+        title: label,
+      }).addTo(pisteMap).bindPopup(html);
+      if (!pisteMarkers.has(num)) pisteMarkers.set(num, marker);
+    };
+    addPin(0, pm.clubMed, '★', `<strong>Club Med Valmorel</strong><br>Approximate position. The map doesn't show the resort.`, true);
+    trip.attractions.filter((x) => x.pistePins).forEach((x) => {
+      const html = `<strong>${x.pisteNum}. ${esc(x.name)}</strong><br>${esc(x.why)}<br><em>${esc(PASS_LABEL[x.pass] || '')}</em>`;
+      x.pistePins.forEach((p) => addPin(x.pisteNum, p, String(x.pisteNum), html, false));
+    });
+  }
+
+  function watchPisteMap() {
+    const holder = document.getElementById('piste-map');
+    if (!holder) return;
+    if (!('IntersectionObserver' in window)) { initPisteMap(); return; }
+    pisteObserver = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        pisteObserver.disconnect();
+        pisteObserver = null;
+        initPisteMap();
+      }
+    }, { rootMargin: '300px' });
+    pisteObserver.observe(holder);
+  }
+
+  function focusPiste(num) {
+    initPisteMap();
+    document.getElementById('piste-map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const marker = pisteMarkers.get(num);
+    if (!pisteMap || !marker) return;
+    pisteMap.setView(marker.getLatLng(), -0.5);
+    marker.openPopup();
+  }
+
   function eveningsHtml() {
     const { evenings } = trip;
     const rows = (items) => `<ul class="pay-list">${items.map((i) => `<li>
@@ -695,6 +793,7 @@
     view.innerHTML = `<h1 class="page-title">Explore</h1>
       <div class="chips" role="group" aria-label="Jump to">
         <button class="chip" data-action="jump" data-target="map-section">Map by day</button>
+        <button class="chip" data-action="jump" data-target="piste-section">Piste map</button>
         <button class="chip" data-action="jump" data-target="things">Things to do</button>
         <button class="chip" data-action="jump" data-target="evenings">Evenings</button>
         <a class="chip" href="#food">Food</a>
@@ -704,9 +803,11 @@
         <h2 class="section-title">Things to do</h2>
         <div id="explore-results"></div>
       </section>
+      ${pisteMapHtml()}
       ${eveningsHtml()}`;
     renderExploreResults();
     initMap();
+    watchPisteMap();
   }
 
   function renderExploreResults() {
@@ -739,13 +840,14 @@
             <p>${esc(a.why)}</p>
             ${a.tip ? `<p class="muted">${esc(a.tip)}</p>` : ''}
             <p class="card-badges">
-              <span class="badge ${a.onPiste ? 'status-booked' : 'status-idea'}">${a.onPiste ? 'On the piste map' : 'Not on the piste map'}</span>
+              <span class="badge ${a.onPiste ? 'status-booked' : 'status-idea'}">${a.onPiste ? `On the piste map, #${a.pisteNum}` : 'Not on the piste map'}</span>
               <span class="badge ${a.pass === 'covered' ? 'status-booked' : a.pass === 'none' ? 'status-idea' : 'status-todo'}">${esc(PASS_LABEL[a.pass] || '')}</span>
             </p>
             <div class="card-actions">
               <button class="chip" aria-pressed="${fav}" data-action="toggle-list" data-list="favs" data-name="${esc(a.name)}">${fav ? 'Saved' : 'Save'}</button>
               <button class="chip" aria-pressed="${seen}" data-action="toggle-list" data-list="visited" data-name="${esc(a.name)}">${seen ? 'Done' : 'Mark done'}</button>
               <button class="chip" data-action="map-focus" data-lat="${a.lat}" data-lon="${a.lon}">On the map</button>
+              ${a.pistePins ? `<button class="chip" data-action="piste-focus" data-num="${a.pisteNum}">Piste map #${a.pisteNum}</button>` : ''}
               <a class="chip" href="${esc(mapsUrl(a.q))}" target="_blank" rel="noopener">Maps</a>
             </div>
           </article>`;
@@ -1225,6 +1327,8 @@
       refreshKit();
     } else if (action === 'jump-lessons') {
       document.getElementById('lessons').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'piste-focus') {
+      focusPiste(Number(el.dataset.num));
     } else if (action === 'map-day') {
       showMapDay(el.dataset.day);
     } else if (action === 'map-leg') {

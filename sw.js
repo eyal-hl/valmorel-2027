@@ -13,6 +13,8 @@ const ASSETS = [
   'js/mountain-data.js',
   'vendor/leaflet/leaflet.js',
   'vendor/leaflet/leaflet.css',
+  'img/piste-map.jpg',
+  'img/piste-map-marked.jpg',
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
