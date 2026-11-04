@@ -206,6 +206,9 @@
       <section id="lessons" class="lessons">
         <h2 class="section-title">How group lessons work</h2>
         <p>${esc(lessons.summary)}</p>
+        <dl class="facts">${lessons.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+
+        <h3 class="sub-title">Your week, step by step</h3>
         <ol class="steps">
           ${lessons.steps.map((s) => `<li><strong>${esc(s.title)}</strong><span class="muted">${esc(s.detail)}</span></li>`).join('')}
         </ol>
@@ -219,6 +222,9 @@
           <div><h4>Ski</h4>${levelRows(lessons.ski)}</div>
           <div><h4>Snowboard</h4>${levelRows(lessons.board)}</div>
         </div>
+
+        <h3 class="sub-title">What guests say</h3>
+        <dl class="facts">${lessons.reviews.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
 
         <h3 class="sub-title">Ask when you sign up</h3>
         <ul class="ask-list">${lessons.ask.map((q) => `<li>${esc(q)}</li>`).join('')}</ul>

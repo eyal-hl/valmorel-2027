@@ -1,7 +1,7 @@
 // Offline support. Same-origin files are revalidated with the server when online
 // (GitHub Pages otherwise lets browsers reuse files for 10 minutes) and served
 // from the cache otherwise. Paths are relative so this works under a
-// GitHub Pages project path such as /franceTrip/.
+// GitHub Pages project path such as /valmorel-2027/.
 const CACHE = 'carnet-v1';
 const ASSETS = [
   './',
