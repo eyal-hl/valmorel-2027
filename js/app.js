@@ -59,7 +59,7 @@
   }
 
   /* ---------- navigation ---------- */
-  const TABS = [['home', 'Home'], ['plan', 'Plan'], ['map', 'Map'], ['explore', 'Explore'], ['kit', 'Kit']];
+  const TABS = [['home', 'Home'], ['plan', 'Plan'], ['included', 'Included'], ['map', 'Map'], ['explore', 'Explore'], ['kit', 'Kit']];
   const currentTab = () => { const id = location.hash.slice(1); return TABS.some(([t]) => t === id) ? id : 'home'; };
 
   let map = null;
@@ -72,7 +72,7 @@
     document.getElementById('nav').innerHTML = TABS
       .map(([id, label]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ''}>${label}</a>`)
       .join('');
-    ({ home: renderHome, plan: renderPlan, map: renderMap, explore: renderExplore, kit: renderKit })[tab]();
+    ({ home: renderHome, plan: renderPlan, included: renderIncluded, map: renderMap, explore: renderExplore, kit: renderKit })[tab]();
     window.scrollTo(0, 0);
   }
 
@@ -165,26 +165,81 @@
   function stayHtml() {
     return `<section>
       <h2 class="section-title">Where you're staying</h2>
-      <div class="stay">
-        <div class="stay-main">
-          <h3>${esc(resort.name)}</h3>
-          <p class="muted">${esc(resort.region)} · ${esc(plural(resort.guests, 'guest'))} · ${esc(plural(resort.nights, 'night'))}</p>
-          <p>${esc(resort.blurb)}</p>
-          <p class="muted">${esc(resort.address)}</p>
-          <div class="card-actions">
-            <a class="chip" href="${esc(mapsUrl(resort.name))}" target="_blank" rel="noopener">Open in Maps</a>
-            <a class="chip" href="${esc(resort.site)}" target="_blank" rel="noopener">Club Med page</a>
-          </div>
-        </div>
-        <div class="inc">
-          <h4>Included</h4>
-          <ul>${trip.included.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-          <h4>Costs extra</h4>
-          <ul class="extra">${trip.extras.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-          <p class="muted small">From Club Med's public listing. Your voucher is the final word.</p>
+      <div class="stay-main">
+        <h3>${esc(resort.name)}</h3>
+        <p class="muted">${esc(resort.region)} · ${esc(plural(resort.guests, 'guest'))} · ${esc(plural(resort.nights, 'night'))}</p>
+        <p>${esc(resort.blurb)}</p>
+        <p class="muted">${esc(resort.address)}</p>
+        <div class="card-actions">
+          <a class="chip" href="#included">What's included</a>
+          <a class="chip" href="${esc(mapsUrl(resort.name))}" target="_blank" rel="noopener">Open in Maps</a>
+          <a class="chip" href="${esc(resort.site)}" target="_blank" rel="noopener">Club Med page</a>
         </div>
       </div>
     </section>`;
+  }
+
+  /* ---------- included ---------- */
+  function renderIncluded() {
+    const payRows = (rows) => `<ul class="pay-list">${rows.map((r) => `<li>
+      <strong>${esc(r.title)}</strong>
+      <span class="muted">${esc(r.detail)}</span>
+    </li>`).join('')}</ul>`;
+
+    const { lessons } = trip;
+    const levelRows = (rows) => `<dl class="levels">${rows.map(([level, what]) => `<div><dt>${esc(level)}</dt><dd>${esc(what)}</dd></div>`).join('')}</dl>`;
+
+    view.innerHTML = `<h1 class="page-title">What's included</h1>
+      <p class="muted lede">From Club Med's public pages, not your own contract. Your voucher is the final word.</p>
+      <button class="btn btn-quiet" data-action="jump-lessons">How group lessons work</button>
+
+      <section>
+        <h2 class="section-title">Already paid for</h2>
+        <div class="inc-groups">
+          ${trip.included.map((group) => `<article class="inc-group">
+            <h3>${esc(group.title)}</h3>
+            <ul class="inc-list">${group.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+          </article>`).join('')}
+        </div>
+      </section>
+
+      <section id="lessons" class="lessons">
+        <h2 class="section-title">How group lessons work</h2>
+        <p>${esc(lessons.summary)}</p>
+        <ol class="steps">
+          ${lessons.steps.map((s) => `<li><strong>${esc(s.title)}</strong><span class="muted">${esc(s.detail)}</span></li>`).join('')}
+        </ol>
+
+        <h3 class="sub-title">A typical day</h3>
+        <dl class="levels day-times">${lessons.day.map(([time, what]) => `<div><dt>${esc(time)}</dt><dd>${esc(what)}</dd></div>`).join('')}</dl>
+        <p class="muted small">${esc(lessons.dayNote)}</p>
+
+        <h3 class="sub-title">Which level are you?</h3>
+        <div class="level-cols">
+          <div><h4>Ski</h4>${levelRows(lessons.ski)}</div>
+          <div><h4>Snowboard</h4>${levelRows(lessons.board)}</div>
+        </div>
+
+        <h3 class="sub-title">Ask when you sign up</h3>
+        <ul class="ask-list">${lessons.ask.map((q) => `<li>${esc(q)}</li>`).join('')}</ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">Pay extra at the resort</h2>
+        <p class="muted lede">Club Med doesn't publish prices or name every paid activity online, so ask at the resort for the full list and current prices.</p>
+        ${payRows(trip.paid)}
+      </section>
+
+      <section>
+        <h2 class="section-title">Outside Club Med</h2>
+        ${payRows(trip.outside)}
+      </section>
+
+      <section>
+        <h2 class="section-title">Only with a suite</h2>
+        <p class="muted lede">Club Med's suite perks are not part of a standard room. Your emails don't show your room type, so check your voucher.</p>
+        <ul class="inc-list suite-list">${trip.suite.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+      </section>`;
   }
 
   function renderHome() {
@@ -513,6 +568,8 @@
     if (action === 'jump-today') {
       const target = document.getElementById(`day-${today()}`);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (action === 'jump-lessons') {
+      document.getElementById('lessons').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (action === 'map-fit') {
       fitMap(el.dataset.fit);
     } else if (action === 'explore') {

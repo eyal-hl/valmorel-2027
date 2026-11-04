@@ -213,8 +213,7 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 .ticket-stub strong { font: 600 26px var(--serif); color: var(--ink); }
 
 /* Stay */
-.stay { display: grid; gap: 14px; }
-.stay-main, .inc, .card, .pack-group, .wx-now > div {
+.stay-main, .card, .pack-group, .wx-now > div {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -222,10 +221,6 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 }
 .stay-main { display: flex; flex-direction: column; gap: 6px; border-top: 4px solid var(--bleu); }
 .stay-main h3 { font-size: 24px; }
-.inc h4 { font: 700 12px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
-.inc ul { margin: 0 0 14px; padding-left: 18px; }
-.inc li { margin: 2px 0; }
-@media (min-width: 720px) { .stay { grid-template-columns: 1.1fr 1fr; } }
 
 /* To-do list */
 .todos { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px; }
@@ -397,3 +392,54 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
+
+/* Included tab */
+.inc-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.inc-group { background: var(--card); border: 1px solid var(--line); border-top: 4px solid #1e6b4c; border-radius: 12px; padding: 16px; }
+.inc-group h3 { font-size: 20px; margin-bottom: 8px; }
+.inc-list { list-style: none; margin: 0; padding: 0; }
+.inc-list li { position: relative; padding: 4px 0 4px 24px; }
+.inc-list li::before { content: "✓"; position: absolute; left: 2px; color: #1e6b4c; font-weight: 700; }
+.suite-list li::before { content: "★"; color: var(--muted); font-weight: 400; }
+.pay-list { list-style: none; margin: 0; padding: 0; }
+.pay-list li { display: flex; flex-direction: column; padding: 10px 0; border-top: 1px solid var(--line); }
+.view section .lede { margin: -6px 0 12px; }
+
+@media (prefers-color-scheme: dark) {
+  .inc-list li::before { color: #6fcf9f; }
+  .suite-list li::before { color: var(--muted); }
+}
+@media (max-width: 719px) {
+  .nav a { font-size: 13px; min-width: 0; }
+}
+
+/* Group lessons */
+.lessons { scroll-margin-top: 12px; }
+.sub-title { font-size: 20px; margin: 22px 0 8px; }
+.steps { list-style: none; counter-reset: step; margin: 14px 0 0; padding: 0; }
+.steps li { counter-increment: step; position: relative; display: flex; flex-direction: column; padding: 0 0 14px 42px; }
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bleu);
+  color: var(--accent-ink);
+  font: 600 15px var(--serif);
+}
+.levels { margin: 0; }
+.levels > div { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.levels dt { font: 600 16px var(--serif); color: var(--bleu); }
+.levels dd { margin: 0; }
+.day-times > div { grid-template-columns: 56px 1fr; }
+.day-times + .small { margin-top: 6px; }
+.level-cols { display: grid; gap: 16px; }
+.level-cols h4 { font: 700 12px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.ask-list { margin: 0; padding-left: 20px; }
+.ask-list li { padding: 3px 0; }
+@media (min-width: 720px) { .level-cols { grid-template-columns: 1.3fr 1fr; gap: 28px; } }
