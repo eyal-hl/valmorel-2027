@@ -661,3 +661,8 @@ body.is-map .seg { flex: none; }
 @media (prefers-color-scheme: dark) {
   .route-warn { background: #4a3b00; color: #fff3c4; }
 }
+
+/* Direction arrow */
+.compass { position: absolute; z-index: 800; left: 10px; bottom: 10px; display: flex; flex-direction: column; align-items: center; padding: 2px; background: rgb(255 255 255 / 92%); border-radius: 12px; box-shadow: 0 1px 5px rgb(0 0 0 / 35%); pointer-events: none; }
+.compass svg { display: block; }
+.compass span { padding: 0 4px 3px; color: #14213d; font: 700 10px var(--sans); white-space: nowrap; }

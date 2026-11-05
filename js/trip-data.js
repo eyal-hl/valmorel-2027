@@ -244,6 +244,8 @@ window.TRIP = {
     width: 3450,
     height: 1700,
     clubMed: [470, 972],
+    // Clockwise from straight up, averaged from lift bearings. The map is a painting, so this is approximate.
+    northAngle: 205,
   },
   attractions: [
     { name: 'The Grand Domaine', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 1, pistePins: [[925,198]], pass: 'covered', lat: 45.445, lon: 6.42, q: 'Valmorel ski area', why: 'About 165 km of pistes across Valmorel, Doucy, Celliers and Saint-François-Longchamp.', tip: 'Covered Monday to Saturday by the pass Club Med includes.' },

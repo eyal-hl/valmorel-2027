@@ -678,6 +678,27 @@
       if (on) b.parentElement.scrollLeft = b.offsetLeft - b.parentElement.offsetLeft - 60;
     });
     document.querySelectorAll('[data-action="map-base"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.base === mapState.base)));
+    updateCompass();
+  }
+
+  function updateCompass() {
+    const compass = document.getElementById('compass');
+    if (!compass) return;
+    const piste = mapState.base === 'piste';
+    const angle = piste ? trip.pisteMap.northAngle : 0;
+    const rad = (angle * Math.PI) / 180;
+    // The needle turns with the map, but the N stays upright so it can be read.
+    compass.innerHTML = `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+      <g transform="rotate(${angle} 24 24)">
+        <path d="M24 13l5 11h-10z" fill="#c8102e"/>
+        <path d="M24 35l5-11h-10z" fill="#9aa3b5"/>
+      </g>
+      <text x="${(24 + 18 * Math.sin(rad)).toFixed(1)}" y="${(24 - 18 * Math.cos(rad)).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#c8102e">N</text>
+    </svg>${piste ? '<span>Facing south</span>' : ''}`;
+    compass.setAttribute('aria-label', piste
+      ? 'North is roughly towards the bottom of this map, because it faces south.'
+      : 'North is at the top of this map.');
+    compass.title = compass.getAttribute('aria-label');
   }
 
   function addResortMarker() {
@@ -878,6 +899,7 @@
       </div>
       <div class="map-stage">
         <div id="map" class="stage-map"></div>
+        <div id="compass" class="compass" role="img"></div>
         <div class="base-switch" role="group" aria-label="Map type">
           <button data-action="map-base" data-base="piste" aria-pressed="${mapState.base === 'piste'}">Piste</button>
           <button data-action="map-base" data-base="street" aria-pressed="${mapState.base === 'street'}">Street</button>
