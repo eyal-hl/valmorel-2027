@@ -1,6 +1,6 @@
 // Trip content. This file is published with the site and GitHub Pages is public,
 // so keep out booking numbers, prices, surnames, passport details and home
-// addresses. Booking references belong in the on-device section of the Kit tab.
+// addresses. Booking references belong in the on-device section of the Info tab's Kit view.
 //
 // Item status: 'booked' (from a confirmation email), 'todo' (still needs sorting),
 // 'idea' (a suggestion, not a reservation).
@@ -149,7 +149,7 @@ window.TRIP = {
   todos: [
     { id: 'flight-times', title: 'Watch for your flight times from Club Med', detail: 'Flights and transfers are arranged and paid. Add the times here once you have them.' },
     { id: 'rental', title: 'Decide on snowboard rental', detail: 'Club Med charges extra for boards and boots, which you can order in advance or on site. Know your boot size, and whether you ride regular or goofy. Check whether your booking already has it.' },
-    { id: 'book-lessons', title: 'Reserve snowboard lesson places from 25 December', detail: 'Booking opens 30 days before arrival, through Easy Arrival in your Club Med personal area. The Included tab has a level chart and explains how lessons work.' },
+    { id: 'book-lessons', title: 'Reserve snowboard lesson places from 25 December', detail: 'Booking opens 30 days before arrival, through Easy Arrival in your Club Med personal area. The Info tab has a level chart and explains how lessons work.' },
     { id: 'voucher', title: 'Check the voucher against your passports', detail: 'Club Med asks that every name matches the passport exactly.' },
     { id: 'passport', title: 'Check passports are valid to 31 July 2027', detail: 'Club Med asks for at least six months past your return date.' },
     { id: 'entry', title: 'Check EU entry rules before flying', detail: 'The EU fingerprint and photo border check (EES) may apply. The ETIAS travel permit may also have started by January, so check the official site.', url: 'https://travel-europe.europa.eu/etias_en', urlLabel: 'Official ETIAS page' },
@@ -161,7 +161,7 @@ window.TRIP = {
       { when: 'Time to come', at: '06:00', type: 'flight', status: 'booked', title: 'Flight to France', detail: 'Arranged and paid through Club Med. Times to come.' },
       { when: 'Time to come', at: '10:00', type: 'car', status: 'booked', title: 'Transfer to Valmorel', detail: 'Arranged by Club Med. About 1 h 20 to 3 h, depending on the airport.' },
       { when: 'From about 15:00', at: '15:00', type: 'hotel', status: 'booked', title: 'Check in at Club Med Valmorel', detail: 'Listings say 15:00 or 16:00. Confirm on your voucher.' },
-      { when: 'After check-in', at: '16:30', type: 'ski', status: 'todo', title: 'Sign up for lessons and collect your gear', detail: 'At the ESF office and rental shop in the resort, unless you reserved in advance. Details are on the Included tab.' },
+      { when: 'After check-in', at: '16:30', type: 'ski', status: 'todo', title: 'Sign up for lessons and collect your gear', detail: 'At the ESF office and rental shop in the resort, unless you reserved in advance. Details are on the Info tab.' },
       { when: 'Evening', type: 'food', status: 'idea', title: 'First dinner, early night', detail: 'Altitude plus travel makes for a tired first evening' },
     ] },
     { date: '2027-01-25', title: 'Find your board legs', items: [
@@ -213,7 +213,7 @@ window.TRIP = {
     { id: 'tue26', date: '2027-01-26', label: 'Tue 26', title: 'The Planchamp side', pass: true, route: 'planchamp', blurb: 'A gondola loop on long blue runs, then a different way back to Club Med.', lead: 'Take the Valmobus line 1 from Club Med to the Planchamp stop, about 6 minutes.', warn: ['Les Traverses is a long traversing run, so keep some speed on your board.'], stops: [
       { name: 'Beaudin beginner area', lat: 45.4483, lon: 6.4233, note: 'At the top of the gondola, with a covered carpet' },
     ] },
-    { id: 'wed27', date: '2027-01-27', label: 'Wed 27', title: 'Over to Saint-François', pass: true, route: 'stfrancois', blurb: 'The big crossing, on blue runs using only gondolas and chairlifts.', lead: 'The Pierrafort gondola is about 350 m from Club Med. Ask at the resort for the easiest way there.', warn: ['Be on the Frêne chairlift before 16:00. It is the last connection back to Valmorel. If you miss it, you pay your own way back.', 'Check that your lift pass is a Grand Domaine pass. A Valmorel-only pass stops at the Madeleine.', 'Go on a clear day, and check the lifts are open on the live piste map.'], stops: [
+    { id: 'wed27', date: '2027-01-27', label: 'Wed 27', title: 'Over to Saint-François', pass: true, lastLift: 'Frêne chairlift before 16:00', route: 'stfrancois', blurb: 'The big crossing, on blue runs using only gondolas and chairlifts.', lead: 'The Pierrafort gondola is about 350 m from Club Med. Ask at the resort for the easiest way there.', warn: ['Be on the Frêne chairlift before 16:00. It is the last connection back to Valmorel. If you miss it, you pay your own way back.', 'Check that your lift pass is a Grand Domaine pass. A Valmorel-only pass stops at the Madeleine.', 'Go on a clear day, and check the lifts are open on the live piste map.'], stops: [
       { name: 'Col de la Madeleine', lat: 45.435, lon: 6.3755, note: 'The pass between the two sides' },
       { name: 'Saint-François-Longchamp', lat: 45.4173, lon: 6.3621, note: 'Lunch on the far side' },
     ] },
@@ -414,7 +414,7 @@ window.TRIP = {
     ['Someone is hurt', 'Quelqu\'un est blessé', 'kel-KUHN eh bleh-SAY'],
   ],
   practical: [
-    ['Injury on the slopes', 'Call the number printed on your lift pass, or 112. The Mountain tab has the full steps, and the resort has a nurse on site.'],
+    ['Injury on the slopes', 'Call the number printed on your lift pass, or 112. The Slopes view has the full steps, and the resort has a nurse on site.'],
     ['Money', 'Euro. Cards work widely, and meals and drinks are covered at the resort.'],
     ['Power', 'Type E sockets, 230 V.'],
     ['Altitude', 'At about 1,460 m the air is drier and the sun is stronger. Drink water and wear sunscreen, even on cloudy days.'],
