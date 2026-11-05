@@ -26,7 +26,7 @@ window.TRIP = {
   // From Club Med's public Valmorel pages, except where a line says otherwise.
   included: [
     { title: 'On the snow', items: [
-      'Lift pass for 6 days, Monday to Saturday, covering the Grand Domaine (about 165 km of pistes)',
+      'Grand Domaine lift pass for 6 days, Monday to Saturday (about 165 km of pistes)',
       '25 hours of ESF group snowboard lessons for all levels, Monday to Friday',
       'Snowshoes',
     ] },
@@ -56,15 +56,9 @@ window.TRIP = {
     ] },
   ],
   liftPass: {
-    intro: 'Club Med includes a 6-day Grand Domaine lift pass, Monday to Saturday. It is not valid on your two Sunday travel days.',
-    covered: [
-      'All lifts and pistes in Valmorel, Doucy, Celliers and Saint-François-Longchamp',
-      'Pirates Snowpark and both boardercross courses',
-      'Beginner areas and freeride runs',
-      'The Télébourg gondola between the village areas',
-      'Free extras such as photopoints, the picnic room and behind-the-scenes tours',
-    ],
+    intro: 'Club Med includes a 6-day Grand Domaine lift pass, Monday to Saturday.',
     notCovered: [
+      'Your two Sunday travel days',
       'Zip line, booked separately',
       'Snowtubing, which needs its own tickets',
       'Les Trois Vallées, Méribel and Courchevel, which need a separate pass',
@@ -248,7 +242,7 @@ window.TRIP = {
     northAngle: 205,
   },
   attractions: [
-    { name: 'The Grand Domaine', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 1, pistePins: [[925,198]], pass: 'covered', lat: 45.445, lon: 6.42, q: 'Valmorel ski area', why: 'About 165 km of pistes across Valmorel, Doucy, Celliers and Saint-François-Longchamp.', tip: 'Covered Monday to Saturday by the pass Club Med includes.' },
+    { name: 'The Grand Domaine', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 1, pistePins: [[925,198]], pass: 'covered', lat: 45.445, lon: 6.42, q: 'Valmorel ski area', why: 'About 165 km of pistes across Valmorel, Doucy, Celliers and Saint-François-Longchamp.', tip: 'Your lift pass does not work on your two Sunday travel days.' },
     { name: 'Col de la Madeleine', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 2, pistePins: [[2160,807]], pass: 'covered', lat: 45.435, lon: 6.3755, q: 'Col de la Madeleine', why: 'The 2,000 m pass joining the two sides, better known as a Tour de France climb.', tip: 'A Valmorel-only pass stops here, so check yours says Grand Domaine.' },
     { name: 'Saint-François-Longchamp', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 3, pistePins: [[2965,887]], pass: 'covered', lat: 45.4173, lon: 6.3621, q: 'Saint-François-Longchamp', why: 'The village on the far side of the domain, a change of scene for lunch.', tip: 'Be on the Frêne chairlift before 16:00 to get back to Valmorel.' },
     { name: 'Doucy-Combelouvière', area: 'resort', type: 'On the snow', onPiste: true, pisteNum: 4, pistePins: [[120,1567]], pass: 'covered', lat: 45.4996, lon: 6.4549, q: 'Doucy-Combelouvière', why: 'A quieter corner of the domain with runs among the trees.', tip: 'Getting back from here involves a drag lift.' },

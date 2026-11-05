@@ -542,8 +542,6 @@ code { font: 0.95em ui-monospace, Consolas, monospace; overflow-wrap: anywhere; 
 .run-names .dot { width: 10px; height: 10px; flex: none; }
 .card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
 .map-this-day { margin-top: 8px; }
-.pass-groups { margin-top: 12px; margin-bottom: 8px; }
-.not-covered { border-top-color: var(--rouge); }
 .no-list li::before { content: "✕"; color: var(--rouge); }
 .local-numbers li { flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
 .local-numbers a { font-variant-numeric: tabular-nums; }

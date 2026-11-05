@@ -300,18 +300,9 @@
       </section>
 
       <section>
-        <h2 class="section-title">What your lift pass covers</h2>
+        <h2 class="section-title">What your lift pass doesn't cover</h2>
         <p>${esc(trip.liftPass.intro)}</p>
-        <div class="inc-groups pass-groups">
-          <article class="inc-group">
-            <h3>Covered</h3>
-            <ul class="inc-list">${trip.liftPass.covered.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-          </article>
-          <article class="inc-group not-covered">
-            <h3>Not covered</h3>
-            <ul class="inc-list no-list">${trip.liftPass.notCovered.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-          </article>
-        </div>
+        <ul class="inc-list no-list">${trip.liftPass.notCovered.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>
         <p class="muted small">${esc(trip.liftPass.check)}</p>
       </section>
 
@@ -542,7 +533,8 @@
   const PISTE_COLOR = { novice: '#2e8b57', easy: '#2563c9', intermediate: '#d0212a', advanced: '#111111' };
   const PISTE_NAME = { novice: 'Green', easy: 'Blue', intermediate: 'Red', advanced: 'Black' };
   const COLOUR_HEX = { green: '#2e8b57', blue: '#2563c9', red: '#d0212a', black: '#111111' };
-  const PASS_LABEL = { covered: 'Lift pass covers it', none: 'No lift pass needed', extra: 'Costs extra', separate: 'Needs a separate pass', meal: 'Lift pass gets you there, meal costs extra' };
+  // Only exceptions are shown. Anything without a label is covered or doesn't need a pass.
+  const PASS_LABEL = { extra: 'Costs extra', separate: 'Needs a separate pass', meal: 'Meal costs extra' };
   const mapState = { day: null, base: 'piste', step: -1, focus: null };
   let overlay = null;
   let builtBase = null;
@@ -624,13 +616,13 @@
     data.pistes.forEach((p) => {
       const level = PISTE_NAME[p.d];
       L.polyline(p.p, { color: PISTE_COLOR[p.d] || '#777777', weight: 2.5, opacity: 0.6 }).addTo(map)
-        .bindPopup(`<strong>${esc(p.n || (p.k === 'park' ? 'Snow park' : 'Piste'))}</strong>${level ? `<br>${level} run` : ''}<br>Your lift pass covers it`);
+        .bindPopup(`<strong>${esc(p.n || (p.k === 'park' ? 'Snow park' : 'Piste'))}</strong>${level ? `<br>${level} run` : ''}`);
     });
     data.lifts.forEach((l) => {
       const zip = l.t === 'zip line';
       const clubMed = l.n.startsWith('Club Med');
       L.polyline(l.p, { color: '#14213d', weight: 2, opacity: 0.85, dashArray: zip ? '2 6' : '6 4' }).addTo(map)
-        .bindPopup(`<strong>${esc(l.n || 'Lift')}</strong><br>${esc(l.t)}<br>${zip ? 'Booked separately' : clubMed ? 'Club Med beginner carpet' : 'Your lift pass covers it'}`);
+        .bindPopup(`<strong>${esc(l.n || 'Lift')}</strong><br>${esc(l.t)}${zip ? '<br>Not on your lift pass, book separately' : clubMed ? '<br>Club Med beginner carpet' : ''}`);
     });
   }
 
@@ -716,7 +708,7 @@
   function drawPlaces() {
     if (isPiste()) {
       trip.attractions.filter((x) => x.pistePins).forEach((x) => {
-        const html = `<strong>${x.pisteNum}. ${esc(x.name)}</strong><br>${esc(x.why)}<br><em>${esc(PASS_LABEL[x.pass] || '')}</em>`;
+        const html = `<strong>${x.pisteNum}. ${esc(x.name)}</strong><br>${esc(x.why)}${PASS_LABEL[x.pass] ? `<br><em>${esc(PASS_LABEL[x.pass])}</em>` : ''}`;
         x.pistePins.forEach((p) => {
           const marker = L.marker(toMapPoint(p), {
             icon: L.divIcon({ className: '', html: `<span class="piste-num">${x.pisteNum}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }),
@@ -735,7 +727,7 @@
     });
     trip.attractions.forEach((x) => {
       L.circleMarker([x.lat, x.lon], { radius: 7, color: '#fff', weight: 2, fillColor: STATUS_COLOR[x.area], fillOpacity: 1 }).addTo(overlay)
-        .bindPopup(`<strong>${esc(x.name)}</strong><br>${esc(x.why)}<br><em>${esc(PASS_LABEL[x.pass] || '')}</em><br><a href="${esc(mapsUrl(x.q))}" target="_blank" rel="noopener">Open in Maps</a>`);
+        .bindPopup(`<strong>${esc(x.name)}</strong><br>${esc(x.why)}${PASS_LABEL[x.pass] ? `<br><em>${esc(PASS_LABEL[x.pass])}</em>` : ''}<br><a href="${esc(mapsUrl(x.q))}" target="_blank" rel="noopener">Open in Maps</a>`);
     });
     fitMap('resort');
   }
@@ -812,7 +804,7 @@
   }
   function legDetail(leg) {
     return leg.k === 'lift'
-      ? '<span class="muted">Lift pass covers it</span>'
+      ? ''
       : `<span class="run-names">${leg.names.map((n) => `<span><i class="dot" style="background:${COLOUR_HEX[n.c] || '#777'}"></i>${esc(n.n)}</span>`).join('')}</span>`;
   }
 
@@ -862,7 +854,7 @@
     const firstWarn = (day.warn || [])[0];
     card.innerHTML = `<div class="route-head">
         <h2>${esc(day.title)}</h2>
-        <span class="badge ${day.pass ? 'status-booked' : 'status-idea'}">${day.pass ? 'Lift pass day' : 'No lift pass'}</span>
+        ${day.pass ? '' : '<span class="badge status-todo">No lift pass</span>'}
       </div>
       ${firstWarn ? `<p class="route-warn">${esc(firstWarn)}</p>` : ''}
       ${stepper}
@@ -974,7 +966,7 @@
             ${a.tip ? `<p class="muted">${esc(a.tip)}</p>` : ''}
             <p class="card-badges">
               ${a.pisteNum ? `<span class="badge status-booked">Piste map #${a.pisteNum}</span>` : ''}
-              <span class="badge ${a.pass === 'covered' ? 'status-booked' : a.pass === 'none' ? 'status-idea' : 'status-todo'}">${esc(PASS_LABEL[a.pass] || '')}</span>
+              ${PASS_LABEL[a.pass] ? `<span class="badge status-todo">${esc(PASS_LABEL[a.pass])}</span>` : ''}
             </p>
             <div class="card-actions">
               ${mapButton(a.lat, a.lon, a.name, a.pisteNum)}
