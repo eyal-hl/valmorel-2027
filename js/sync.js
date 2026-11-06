@@ -263,20 +263,28 @@
     async join(id) {
       if (!config) throw new Error('Sharing is not set up');
       const previous = read('sync:trip', null);
-      if (previous !== id) {
-        stopEngine();
-        Object.keys(KEYS).forEach((name) => write(`sync:base:${name}`, undefined));
-        write('sync:member', undefined);
-        write('sync:photosUp', []);
+      if (previous === id) {
+        try { await connect(id); } catch (err) { setStatus('error', explain(err)); throw new Error(explain(err)); }
+        return;
       }
-      write('sync:trip', id);
+      // Join first, and only switch this phone over once that worked, so a
+      // bad link leaves the current trip as it was.
       try {
-        await connect(id);
+        if (!engine) setStatus('connecting', 'Joining…');
+        await ready();
+        await signIn();
+        await tripRef(id).update({ members: window.firebase.firestore.FieldValue.arrayUnion(user.uid) });
       } catch (err) {
-        if (previous !== id) write('sync:trip', previous || undefined);
-        setStatus(previous ? 'error' : 'local', '');
+        if (engine) refreshStatus();
+        else setStatus(previous ? 'error' : 'local', previous ? explain(err) : '');
         throw new Error(explain(err));
       }
+      stopEngine();
+      Object.keys(KEYS).forEach((name) => write(`sync:base:${name}`, undefined));
+      write('sync:photosUp', []);
+      write('sync:trip', id);
+      write('sync:member', user.uid);
+      startEngine(id);
     },
 
     leave() {
