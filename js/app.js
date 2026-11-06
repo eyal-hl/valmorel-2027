@@ -32,7 +32,34 @@
     try { const raw = localStorage.getItem(storeKey(key)); return raw ? JSON.parse(raw) : fallback; }
     catch (e) { return fallback; }
   };
-  const save = (key, value) => { try { localStorage.setItem(storeKey(key), JSON.stringify(value)); } catch (e) { /* storage full or blocked */ } };
+  const save = (key, value) => {
+    try { localStorage.setItem(storeKey(key), JSON.stringify(value)); } catch (e) { /* storage full or blocked */ }
+    if (window.CarnetSync) window.CarnetSync.changed(key);
+  };
+  const newId = (prefix) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+  const sync = window.CarnetSync || { configured: false, active: false, status: { state: 'off' }, changed() {} };
+  const sharing = () => sync.active || Boolean(sync.tripId);
+
+  /* ---------- people ---------- */
+  // Who this phone belongs to. Kept on the phone only. Until it's set, your
+  // food ratings are filed under 'me'.
+  const meId = () => load('me', null) || 'me';
+  const people = () => load('people', []);
+  const personName = (id) => (people().find((p) => p.id === id) || {}).name || (id === meId() ? 'You' : 'Someone');
+  function setMe(id) {
+    const log = load('foodLog', {});
+    Object.values(log).forEach((entry) => {
+      ['ratings', 'notes'].forEach((field) => {
+        const m = entry[field];
+        if (m && 'me' in m) {
+          if (!(id in m)) m[id] = m.me;
+          delete m.me;
+        }
+      });
+    });
+    save('foodLog', log);
+    save('me', id);
+  }
   const toggled = (list, value, on) => (on ? [...list.filter((v) => v !== value), value] : list.filter((v) => v !== value));
 
   const mapsUrl = (query) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -67,7 +94,7 @@
     ['food', 'Food', icon('<path d="M7 3v7a2 2 0 0 0 2 2v9M4 3v5M10 3v5"/><path d="M17 21v-7h-2V7a4 4 0 0 1 4-4v18"/>')],
     ['info', 'Info', icon('<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/>')],
   ];
-  const LEGACY = { map: 'explore/map', included: 'info/included', mountain: 'info/slopes', kit: 'info/kit' };
+  const LEGACY = { map: 'explore/map', included: 'info/included', mountain: 'info/slopes', kit: 'info/kit', money: 'info/money' };
   function parseRoute() {
     const hash = location.hash.slice(1);
     const [tab, sub] = (LEGACY[hash] || hash).split('/');
@@ -76,7 +103,7 @@
   const currentTab = () => parseRoute().tab;
 
   const EXPLORE_VIEWS = [['map', 'Map'], ['things', 'Things to do'], ['evenings', 'Evenings']];
-  const INFO_VIEWS = [['included', 'Included'], ['slopes', 'Slopes'], ['kit', 'Kit']];
+  const INFO_VIEWS = [['included', 'Included'], ['slopes', 'Slopes'], ['money', 'Money'], ['kit', 'Kit']];
   const segHtml = (base, items, active) => `<nav class="seg" aria-label="Views">${items.map(([id, label]) => `<a href="#${base}/${id}" ${id === active ? 'aria-current="page"' : ''}>${label}</a>`).join('')}</nav>`;
 
   let map = null;
@@ -85,6 +112,15 @@
   function route() {
     if (ticker) { clearInterval(ticker); ticker = null; }
     removeMap();
+    const joinId = (location.hash.match(/^#join\/([A-Za-z0-9]{20,40})$/) || [])[1];
+    if (joinId) {
+      document.getElementById('nav').innerHTML = TABS
+        .map(([id, label, svg]) => `<a href="#${id}">${svg}<span>${label}</span></a>`).join('');
+      document.body.classList.remove('is-map');
+      renderJoin(joinId);
+      window.scrollTo(0, 0);
+      return;
+    }
     const { tab, sub } = parseRoute();
     document.getElementById('nav').innerHTML = TABS
       .map(([id, label, svg]) => `<a href="#${id}" ${id === tab ? 'aria-current="page"' : ''}>${svg}<span>${label}</span></a>`)
@@ -95,7 +131,7 @@
   }
 
   function renderInfo(sub) {
-    const views = { included: renderIncluded, slopes: renderMountain, kit: renderKit };
+    const views = { included: renderIncluded, slopes: renderMountain, money: renderMoney, kit: renderKit };
     const active = views[sub] ? sub : 'included';
     views[active]();
     view.insertAdjacentHTML('afterbegin', segHtml('info', INFO_VIEWS, active));
@@ -512,7 +548,7 @@
       </article>`).join('')}
       <section>
         <h2 class="section-title">Your journal</h2>
-        <p class="muted lede">Notes are saved on this device only. Copy them somewhere safe at the end of the trip.</p>
+        <p class="muted lede">${sharing() ? 'Notes are shared with your group as you type.' : `Notes are saved on this phone only. Copy them somewhere safe at the end of the trip${sync.configured ? ', or turn on sharing in Money' : ''}.`}</p>
         <button class="btn btn-quiet" data-action="copy-journal">Copy the whole journal</button>
         <p class="muted small" id="journal-status" role="status"></p>
       </section>
@@ -1078,13 +1114,19 @@
       const image = new Image();
       image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that image')); };
       image.onload = () => {
-        const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+        // Small enough to fit in one Firestore document when shared.
+        const scale = Math.min(1, 1280 / Math.max(image.naturalWidth, image.naturalHeight));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(image.naturalWidth * scale);
         canvas.height = Math.round(image.naturalHeight * scale);
         canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
         URL.revokeObjectURL(url);
-        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not process that image'))), 'image/jpeg', 0.82);
+        const encode = (quality) => canvas.toBlob((blob) => {
+          if (!blob) reject(new Error('Could not process that image'));
+          else if (blob.size > 650000 && quality > 0.45) encode(quality - 0.15);
+          else resolve(blob);
+        }, 'image/jpeg', quality);
+        encode(0.78);
       };
       image.src = url;
     });
@@ -1098,6 +1140,43 @@
     save('foodLog', log);
   }
 
+  // Ratings and notes are per person, so both of you can rate the same dish.
+  // Photos are a map of id to time added, so two phones can add at once.
+  const photoIds = (entry) => {
+    const p = entry.photos;
+    if (Array.isArray(p)) return p;
+    return Object.keys(p || {}).sort((x, y) => p[x] - p[y]);
+  };
+  const myRating = (entry) => (entry.ratings || {})[meId()] || 0;
+  const myNote = (entry) => (entry.notes || {})[meId()] || '';
+  const ratingsOf = (entry) => Object.values(entry.ratings || {}).filter((n) => n > 0);
+  const averageOf = (entry) => {
+    const r = ratingsOf(entry);
+    return r.length ? r.reduce((sum, n) => sum + n, 0) / r.length : 0;
+  };
+
+  function migrateFood() {
+    const log = load('foodLog', {});
+    let changed = false;
+    Object.values(log).forEach((entry) => {
+      if ('rating' in entry) {
+        if (entry.rating > 0) entry.ratings = { ...entry.ratings, [meId()]: entry.rating };
+        delete entry.rating;
+        changed = true;
+      }
+      if ('note' in entry) {
+        if (entry.note) entry.notes = { ...entry.notes, [meId()]: entry.note };
+        delete entry.note;
+        changed = true;
+      }
+      if (Array.isArray(entry.photos)) {
+        entry.photos = Object.fromEntries(entry.photos.map((id, i) => [id, i + 1]));
+        changed = true;
+      }
+    });
+    if (changed) save('foodLog', log);
+  }
+
   // Carry over ticks from the old checklist in Explore.
   function migrateTried() {
     const old = load('tried', null);
@@ -1108,9 +1187,21 @@
     try { localStorage.removeItem(storeKey('tried')); } catch (err) { /* storage blocked */ }
   }
 
+  function othersHtml(entry) {
+    const me = meId();
+    const ids = [...new Set([...Object.keys(entry.ratings || {}), ...Object.keys(entry.notes || {})])].filter((id) => id !== me);
+    const lines = ids.map((id) => {
+      const r = (entry.ratings || {})[id] || 0;
+      const note = (entry.notes || {})[id] || '';
+      if (!r && !note) return '';
+      return `<li><strong>${esc(personName(id))}</strong>${r ? ` <span class="stars-small" aria-label="${plural(r, 'star')}">${'★'.repeat(r)}</span>` : ''}${note ? `<br><span class="muted">${esc(note)}</span>` : ''}</li>`;
+    }).filter(Boolean);
+    return lines.length ? `<ul class="food-others">${lines.join('')}</ul>` : '';
+  }
+
   function foodCardHtml(f) {
     const entry = foodEntry(f.id);
-    const rating = entry.rating || 0;
+    const rating = myRating(entry);
     return `<article class="food-card ${entry.tried ? 'is-tried' : ''}" data-food="${esc(f.id)}">
       <h2>${esc(f.name)}</h2>
       ${f.what ? `<p class="muted">${esc(f.what)}</p>` : ''}
@@ -1121,7 +1212,8 @@
         <button class="chip" aria-pressed="${Boolean(entry.tried)}" data-action="food-tried" data-id="${esc(f.id)}">${entry.tried ? 'Tried' : 'Mark tried'}</button>
       </div>
       <label class="sr-only" for="note-${esc(f.id)}">Note about ${esc(f.name)}</label>
-      <textarea id="note-${esc(f.id)}" class="food-note" data-action="food-note" data-id="${esc(f.id)}" rows="2" placeholder="Where you had it, what you thought…">${esc(entry.note || '')}</textarea>
+      <textarea id="note-${esc(f.id)}" class="food-note" data-action="food-note" data-id="${esc(f.id)}" rows="2" placeholder="Where you had it, what you thought…">${esc(myNote(entry))}</textarea>
+      ${othersHtml(entry)}
       <div class="food-photos" data-photos="${esc(f.id)}"></div>
       <div class="card-actions">
         <label class="chip photo-add">
@@ -1138,25 +1230,39 @@
     const holder = view.querySelector(`[data-photos="${CSS.escape(id)}"]`);
     if (!holder) return;
     const name = (allFood().find((f) => f.id === id) || {}).name || 'this dish';
-    const ids = foodEntry(id).photos || [];
+    const ids = photoIds(foodEntry(id));
+    let missing = 0;
     const urls = await Promise.all(ids.map(async (photoId) => {
       if (photoUrls.has(photoId)) return [photoId, photoUrls.get(photoId)];
       try {
-        const blob = await readPhoto(photoId);
-        if (!blob) return null;
+        let blob = await readPhoto(photoId);
+        if (!blob && sync.active) {
+          blob = await sync.getPhoto(photoId);
+          if (blob) await savePhoto(photoId, blob).catch(() => {});
+        }
+        if (!blob) { missing += 1; return null; }
         const url = URL.createObjectURL(blob);
         photoUrls.set(photoId, url);
         return [photoId, url];
       } catch (err) { return null; }
     }));
-    holder.innerHTML = urls.filter(Boolean).map(([photoId, url]) => `<button class="food-thumb" data-action="food-view" data-id="${esc(id)}" data-photo="${esc(photoId)}" aria-label="View photo of ${esc(name)}"><img src="${esc(url)}" alt=""></button>`).join('');
+    // The card may have been redrawn while photos loaded.
+    const live = view.querySelector(`[data-photos="${CSS.escape(id)}"]`);
+    if (!live) return;
+    live.innerHTML = urls.filter(Boolean).map(([photoId, url]) => `<button class="food-thumb" data-action="food-view" data-id="${esc(id)}" data-photo="${esc(photoId)}" aria-label="View photo of ${esc(name)}"><img src="${esc(url)}" alt=""></button>`).join('')
+      + (missing && sync.active ? `<span class="food-thumb is-waiting">${plural(missing, 'photo')} on the way</span>` : '');
+    if (missing && sync.active && (photoRetries.get(id) || 0) < 4) {
+      photoRetries.set(id, (photoRetries.get(id) || 0) + 1);
+      setTimeout(() => showFoodPhotos(id), 8000);
+    }
   }
+  const photoRetries = new Map();
 
   function foodSummary() {
     const log = load('foodLog', {});
     const foods = allFood();
     const tried = foods.filter((f) => (log[f.id] || {}).tried).length;
-    const ratings = foods.map((f) => (log[f.id] || {}).rating).filter(Boolean);
+    const ratings = foods.flatMap((f) => ratingsOf(log[f.id] || {}));
     const average = ratings.length ? ` · average ${(ratings.reduce((sum, n) => sum + n, 0) / ratings.length).toFixed(1)} ★` : '';
     return `${tried} of ${foods.length} tried${average}`;
   }
@@ -1169,7 +1275,7 @@
       if (foodState.show === 'tried') return entry.tried;
       return true;
     });
-    if (foodState.show === 'best') list.sort((x, y) => ((log[y.id] || {}).rating || 0) - ((log[x.id] || {}).rating || 0));
+    if (foodState.show === 'best') list.sort((x, y) => averageOf(log[y.id] || {}) - averageOf(log[x.id] || {}));
     document.getElementById('food-summary').textContent = foodSummary();
     document.querySelectorAll('[data-action="food-filter"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === foodState.show)));
     document.getElementById('food-list').innerHTML = list.length
@@ -1189,9 +1295,12 @@
 
   function renderFood() {
     migrateTried();
+    migrateFood();
     const filter = (value, label) => `<button class="chip" aria-pressed="${foodState.show === value}" data-action="food-filter" data-value="${value}">${label}</button>`;
     view.innerHTML = `<h1 class="page-title">Food</h1>
-      <p class="muted lede"><strong id="food-summary"></strong><br>Ratings, notes and photos stay on this phone only, so keep your originals in your gallery too.</p>
+      <p class="muted lede"><strong id="food-summary"></strong><br>${sharing()
+        ? 'Ratings, notes and photos are shared with your group. Photos are saved smaller, so keep your originals in your gallery.'
+        : `Ratings, notes and photos stay on this phone only, so keep your originals in your gallery too.${sync.configured ? ' <a href="#info/money">Share with your group</a>.' : ''}`}</p>
       <div class="chips" role="group" aria-label="Show">
         ${filter('all', 'All')}${filter('todo', 'To try')}${filter('tried', 'Tried')}${filter('best', 'Top rated')}
       </div>
@@ -1227,7 +1336,8 @@
         const blob = await shrinkPhoto(file);
         const photoId = `p${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
         await savePhoto(photoId, blob);
-        updateFood(id, { photos: [...(foodEntry(id).photos || []), photoId], tried: true });
+        updateFood(id, { photos: { ...foodEntry(id).photos, [photoId]: Date.now() }, tried: true });
+        sync.putPhoto(photoId, blob, id);
       } catch (err) { failed += 1; }
     }
     refreshFoodCard(id);
@@ -1238,6 +1348,335 @@
   }
 
   const viewer = { id: null, photo: null };
+
+  /* ---------- money ---------- */
+  const euro = (n) => `€${(Math.round(n * 100) / 100).toFixed(2)}`;
+  const RATE_URL = 'https://api.frankfurter.dev/v1/latest?base=EUR&symbols=ILS';
+  let rate = load('rate', null);
+
+  async function loadRate() {
+    if (rate && Date.now() - rate.fetched < 12 * 3600000) return;
+    try {
+      const res = await fetch(RATE_URL);
+      if (!res.ok) throw new Error(res.status);
+      const json = await res.json();
+      if (!json.rates || !json.rates.ILS) throw new Error('no rate');
+      rate = { ils: json.rates.ILS, date: json.date, fetched: Date.now() };
+      save('rate', rate);
+      if (parseRoute().sub === 'money') refreshInfo('money');
+    } catch (e) { /* keep the last rate */ }
+  }
+  const shekels = (eur) => (rate ? `₪${Math.round(eur * rate.ils).toLocaleString('en-GB')}` : '');
+
+  // Older versions saved { what, amount } with no payer.
+  function migrateData() {
+    const spend = load('spend', []);
+    if (spend.some((e) => !e.id)) {
+      save('spend', spend.map((e, i) => (e.id ? e : {
+        id: newId('e'), what: e.what, amount: e.amount, cur: 'EUR', eur: e.amount, paidBy: null, split: [], at: i + 1,
+      })));
+    }
+    const refs = load('refs', []);
+    if (refs.some((r) => !r.id)) save('refs', refs.map((r, i) => (r.id ? r : { ...r, id: newId('r'), at: i + 1 })));
+  }
+
+  const isSplit = (e, ids) => e.paidBy && ids.includes(e.paidBy) && (e.split || []).some((id) => ids.includes(id));
+
+  // Positive means the group owes this person money.
+  function balances(spend, ids) {
+    const bal = Object.fromEntries(ids.map((id) => [id, 0]));
+    spend.forEach((e) => {
+      if (!isSplit(e, ids)) return;
+      const split = e.split.filter((id) => ids.includes(id));
+      bal[e.paidBy] += e.eur;
+      split.forEach((id) => { bal[id] -= e.eur / split.length; });
+    });
+    return bal;
+  }
+
+  // The fewest payments that clear everyone's balance.
+  function settleUp(bal) {
+    const owes = Object.entries(bal).filter(([, v]) => v < -0.005).map(([id, v]) => [id, -v]).sort((a, b) => b[1] - a[1]);
+    const owed = Object.entries(bal).filter(([, v]) => v > 0.005).map(([id, v]) => [id, v]).sort((a, b) => b[1] - a[1]);
+    const out = [];
+    let i = 0;
+    let j = 0;
+    while (i < owes.length && j < owed.length) {
+      const amount = Math.min(owes[i][1], owed[j][1]);
+      out.push({ from: owes[i][0], to: owed[j][0], amount: Math.round(amount * 100) / 100 });
+      owes[i][1] -= amount;
+      owed[j][1] -= amount;
+      if (owes[i][1] < 0.005) i += 1;
+      if (owed[j][1] < 0.005) j += 1;
+    }
+    return out.filter((t) => t.amount >= 0.01);
+  }
+
+  const syncStatusHtml = () => {
+    const { state, text } = sync.status;
+    return `<p class="sync-status is-${esc(state)}" data-sync-status role="status"><span class="sync-dot" aria-hidden="true"></span><span>${esc(text || 'Connecting…')}</span></p>`;
+  };
+
+  function showSyncStatus() {
+    document.querySelectorAll('[data-sync-status]').forEach((el) => { el.outerHTML = syncStatusHtml(); });
+  }
+
+  function sharingHtml() {
+    const me = load('me', null);
+    const ppl = people();
+    if (!sync.configured) {
+      return `<section class="panel">
+        <h2 class="section-title">Sharing</h2>
+        <p class="muted">Sharing between phones isn't switched on for this site yet, so everything here is saved on this phone only.</p>
+      </section>`;
+    }
+    if (!sharing()) {
+      return `<section class="panel">
+        <h2 class="section-title">Share with your group</h2>
+        <p>Keep money, to-dos, packing, food ratings and photos, journal notes and booking references in sync on all your phones. It works offline and catches up when you have signal.</p>
+        <form class="inline-form" data-form="share-start">
+          ${me && ppl.some((p) => p.id === me) ? '' : `<label class="sr-only" for="share-name">Your name</label>
+          <input id="share-name" name="name" placeholder="Your name" autocomplete="given-name" required>`}
+          <button class="btn" type="submit">Start sharing</button>
+        </form>
+        <p class="muted small" id="share-msg" role="status"></p>
+        <p class="muted small">Got an invite link from someone? Open it, or paste it here.</p>
+        <form class="inline-form" data-form="join-paste">
+          <label class="sr-only" for="join-link">Invite link</label>
+          <input id="join-link" name="link" placeholder="Paste an invite link" autocomplete="off" required>
+          <button class="btn btn-quiet" type="submit">Join</button>
+        </form>
+      </section>`;
+    }
+    const known = me && ppl.some((p) => p.id === me);
+    return `<section class="panel">
+      <h2 class="section-title">Shared trip</h2>
+      ${syncStatusHtml()}
+      ${known ? '' : `<div class="who">
+        <p><strong>Which one is you?</strong> This sets whose name goes on your ratings and payments.</p>
+        <div class="chips">${ppl.map((p) => `<button class="chip" data-action="set-me" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join('')}</div>
+        <form class="inline-form" data-form="person" data-me="1">
+          <label class="sr-only" for="me-name">I'm not listed. My name</label>
+          <input id="me-name" name="name" placeholder="I'm not listed. My name" autocomplete="given-name" required>
+          <button class="btn" type="submit">Add me</button>
+        </form>
+      </div>`}
+      <p>Send this link to the others on the trip. Opening it adds their phone.</p>
+      <div class="card-actions">
+        ${navigator.share ? '<button class="btn" data-action="share-invite">Send invite</button>' : ''}
+        <button class="btn btn-quiet" data-action="share-copy">Copy invite link</button>
+      </div>
+      <p class="muted small" id="share-msg" role="status"></p>
+      <details class="fold-lite">
+        <summary>More</summary>
+        <p class="muted small">Anyone with the link can join, so only send it to the people on the trip. Keep it in your chat too: if a phone gets reset, opening it again brings everything back.</p>
+        <button class="btn btn-quiet" data-action="share-leave">Stop sharing on this phone</button>
+      </details>
+    </section>`;
+  }
+
+  function expenseLine(e, ids) {
+    const when = e.at > 1e11 ? new Date(e.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    let who = 'Not split';
+    if (e.kind === 'settle') who = `${esc(personName(e.paidBy))} paid ${esc(personName((e.split || [])[0]))} back`;
+    else if (isSplit(e, ids)) {
+      const split = e.split.filter((id) => ids.includes(id));
+      const forWho = split.length === ids.length && ids.length > 1 ? `split ${split.length} ways`
+        : split.length === 1 ? `for ${esc(personName(split[0]))}` : `split between ${split.map((id) => esc(personName(id))).join(', ')}`;
+      who = `${esc(personName(e.paidBy))} paid, ${forWho}`;
+    } else if (e.paidBy) who = `${esc(personName(e.paidBy))} paid`;
+    const amount = e.cur === 'ILS' ? `₪${e.amount.toFixed(2)} <span class="muted">(${euro(e.eur)})</span>` : euro(e.eur);
+    return `<li class="${e.kind === 'settle' ? 'is-settle' : ''}">
+      <span><strong>${esc(e.what)}</strong> · ${amount}<br><span class="muted small">${who}${when ? ` · ${when}` : ''}</span></span>
+      <button class="chip" data-action="del-expense" data-id="${esc(e.id)}" aria-label="Remove ${esc(e.what)}">Remove</button>
+    </li>`;
+  }
+
+  function renderMoney() {
+    loadRate();
+    const ppl = people();
+    const ids = ppl.map((p) => p.id);
+    const me = load('me', null);
+    const spend = load('spend', []);
+    const real = spend.filter((e) => e.kind !== 'settle');
+    const total = real.reduce((sum, e) => sum + e.eur, 0);
+    const bal = balances(spend, ids);
+    const debts = settleUp(bal);
+    const paid = (id) => real.filter((e) => e.paidBy === id).reduce((sum, e) => sum + e.eur, 0);
+    const defaultPayer = ids.includes(me) ? me : ids[0];
+
+    view.innerHTML = `<h1 class="page-title">Money</h1>
+      <p class="muted lede">Rental, lessons on top, spa, drinks and anything else Club Med doesn't include.${rate ? ` €1 ≈ ₪${rate.ils.toFixed(2)} (ECB rate, ${esc(shortDate(rate.date))}).` : ''}</p>
+      ${sync.configured && !sharing() ? sharingHtml() : ''}
+
+      <section class="money-top">
+        <p class="money-total"><span class="muted small">Spent so far</span><strong>${euro(total)}</strong>${rate && total ? `<span class="muted">≈ ${shekels(total)}</span>` : ''}</p>
+        ${ppl.length > 1 ? `<ul class="money-people">
+          ${ppl.map((p) => `<li><strong>${esc(p.name)}${p.id === me ? ' (you)' : ''}</strong><span>paid ${euro(paid(p.id))}</span></li>`).join('')}
+        </ul>` : ''}
+      </section>
+
+      ${ppl.length > 1 ? `<section>
+        <h2 class="section-title">Settle up</h2>
+        ${debts.length ? `<ul class="refs">${debts.map((d) => `<li>
+          <span><strong>${esc(personName(d.from))}</strong> owes <strong>${esc(personName(d.to))}</strong> ${euro(d.amount)}${rate ? ` <span class="muted">(≈ ${shekels(d.amount)})</span>` : ''}</span>
+          <button class="chip" data-action="settle" data-from="${esc(d.from)}" data-to="${esc(d.to)}" data-amount="${d.amount}">Mark paid back</button>
+        </li>`).join('')}</ul>` : '<p class="muted">All square.</p>'}
+      </section>` : ''}
+
+      <section>
+        <h2 class="section-title">Add an expense</h2>
+        <form class="money-form" data-form="expense">
+          <div class="inline-form">
+            <label class="sr-only" for="ex-what">What it was for</label>
+            <input id="ex-what" name="what" placeholder="e.g. Board rental" autocomplete="off" required>
+          </div>
+          <div class="inline-form">
+            <label class="sr-only" for="ex-amount">Amount</label>
+            <input id="ex-amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="Amount" required>
+            <label class="sr-only" for="ex-cur">Currency</label>
+            <select id="ex-cur" name="cur">
+              <option value="EUR">€ EUR</option>
+              <option value="ILS" ${rate ? '' : 'disabled'}>₪ ILS${rate ? '' : ' (needs signal once)'}</option>
+            </select>
+          </div>
+          ${ppl.length > 1 ? `<div class="money-field">
+            <label for="ex-payer">Paid by</label>
+            <select id="ex-payer" name="paidBy">${ppl.map((p) => `<option value="${esc(p.id)}" ${p.id === defaultPayer ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+          </div>
+          <fieldset class="money-field">
+            <legend>Split between</legend>
+            <div class="chips">${ppl.map((p) => `<label class="check chip-check"><input type="checkbox" name="split" value="${esc(p.id)}" checked><span>${esc(p.name)}</span></label>`).join('')}</div>
+          </fieldset>` : ''}
+          <button class="btn" type="submit">Add</button>
+          <p class="muted small" id="expense-msg" role="status"></p>
+        </form>
+      </section>
+
+      <section>
+        <h2 class="section-title">Expenses <span class="muted small">${plural(real.length, 'item')}</span></h2>
+        ${spend.length ? `<ul class="refs">${spend.slice().reverse().map((e) => expenseLine(e, ids)).join('')}</ul>` : '<p class="muted">Nothing logged yet.</p>'}
+      </section>
+
+      <section>
+        <h2 class="section-title">Who's on the trip</h2>
+        <p class="muted">Add everyone who shares costs, so you can split them.</p>
+        ${ppl.length ? `<ul class="refs">${ppl.map((p) => `<li>
+          <span><strong>${esc(p.name)}</strong>${p.id === me ? ' <span class="muted">(you)</span>' : ''}</span>
+          <span class="card-actions">
+            ${!me || !ids.includes(me) ? `<button class="chip" data-action="set-me" data-id="${esc(p.id)}">This is me</button>` : ''}
+            <button class="chip" data-action="del-person" data-id="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">Remove</button>
+          </span>
+        </li>`).join('')}</ul>` : ''}
+        <form class="inline-form" data-form="person" ${ids.includes(me) ? '' : 'data-me="1"'}>
+          <label class="sr-only" for="person-name">${ids.includes(me) ? 'Name' : 'Your name'}</label>
+          <input id="person-name" name="name" placeholder="${ids.includes(me) ? 'Add someone' : 'Your name'}" autocomplete="off" required>
+          <button class="btn" type="submit">Add</button>
+        </form>
+      </section>
+
+      ${sync.configured && !sharing() ? '' : sharingHtml()}`;
+  }
+
+  function refreshInfo(sub) {
+    const y = window.scrollY;
+    renderInfo(sub);
+    window.scrollTo({ top: y, behavior: 'instant' });
+  }
+
+  async function startSharing(form) {
+    const msg = document.getElementById('share-msg');
+    const name = form.elements.name ? String(form.elements.name.value).trim() : '';
+    if (form.elements.name && !name) return;
+    const button = form.querySelector('button');
+    button.disabled = true;
+    msg.textContent = 'Setting up…';
+    try {
+      if (name) {
+        const id = newId('p');
+        save('people', [...people(), { id, name, at: Date.now() }]);
+        setMe(id);
+      }
+      await sync.create();
+      refreshInfo('money');
+    } catch (err) {
+      button.disabled = false;
+      msg.textContent = err.message;
+    }
+  }
+
+  async function shareInvite(copyOnly) {
+    const msg = document.getElementById('share-msg');
+    const url = sync.inviteLink();
+    if (!copyOnly && navigator.share) {
+      try { await navigator.share({ title: 'Valmorel 2027', text: 'Join our trip in Carnet de France', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      msg.textContent = 'Invite link copied.';
+    } catch (e) {
+      msg.innerHTML = `Copy this link: <code class="invite">${esc(url)}</code>`;
+    }
+  }
+
+  /* ---------- joining ---------- */
+  function renderJoin(id) {
+    if (!sync.configured) {
+      view.innerHTML = `<h1 class="page-title">Join the trip</h1>
+        <p>Sharing isn't switched on for this site yet, so this link can't be used.</p>
+        <a class="btn" href="#home">Go to Home</a>`;
+      return;
+    }
+    if (sync.tripId === id) {
+      view.innerHTML = `<h1 class="page-title">You're in</h1>
+        <p>This phone is already part of the shared trip.</p>
+        <a class="btn" href="#info/money">Open Money</a>`;
+      return;
+    }
+    view.innerHTML = `<h1 class="page-title">Join the trip</h1>
+      <p class="lede">Someone shared their Valmorel trip with you. Joining keeps money, to-dos, packing, food ratings and photos, journal notes and booking references in sync between your phones.</p>
+      <p>Anything you've already saved on this phone is added to the shared trip.</p>
+      ${sync.tripId ? '<p><strong>This phone is sharing a different trip.</strong> Joining this one stops syncing the other.</p>' : ''}
+      <button class="btn" data-action="join-trip" data-id="${esc(id)}">Join</button>
+      <p class="muted small" id="join-msg" role="status"></p>
+      <p class="muted small">On iPhone, the Home Screen version of the site keeps its own data. If you use it from your Home Screen, open it there and paste this link in Info, then Money.</p>`;
+  }
+
+  async function joinTrip(button) {
+    const msg = document.getElementById('join-msg');
+    button.disabled = true;
+    msg.textContent = 'Joining…';
+    try {
+      await sync.join(button.dataset.id);
+      location.hash = '#info/money';
+    } catch (err) {
+      button.disabled = false;
+      msg.textContent = err.message;
+    }
+  }
+
+  /* ---------- live updates from other phones ---------- */
+  let refreshWaiting = false;
+  function busyEditing() {
+    const el = document.activeElement;
+    const typing = el && view.contains(el) && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'file', 'button', 'submit'].includes(el.type)));
+    return Boolean(typing || view.querySelector('dialog[open]'));
+  }
+
+  // Redraw the current page with the new data, keeping the scroll position
+  // and any open sections. Waits while you're typing, and skips the map.
+  function refreshAfterSync() {
+    if (document.body.classList.contains('is-map')) return;
+    if (busyEditing()) { refreshWaiting = true; return; }
+    refreshWaiting = false;
+    const y = window.scrollY;
+    const open = [...view.querySelectorAll('details')].map((d) => d.open);
+    route();
+    const now = [...view.querySelectorAll('details')];
+    if (now.length === open.length) now.forEach((d, i) => { d.open = open[i]; });
+    window.scrollTo({ top: y, behavior: 'instant' });
+  }
+  const refreshIfWaiting = () => setTimeout(() => { if (refreshWaiting && !busyEditing()) refreshAfterSync(); }, 250);
 
   /* ---------- kit ---------- */
   const EMERGENCY = [
@@ -1264,9 +1703,6 @@
     const allItems = Object.values(groups).flat();
     const done = allItems.filter((i) => checked.includes(i)).length;
     const refs = load('refs', []);
-    const spend = load('spend', []);
-    const spent = spend.reduce((sum, s) => sum + s.amount, 0);
-    const euro = (n) => `€${n.toFixed(2)}`;
     const canSpeak = 'speechSynthesis' in window;
 
     view.innerHTML = `<h1 class="page-title">The kit</h1>
@@ -1291,30 +1727,12 @@
       </section>
 
       <section>
-        <h2 class="section-title">Spending <span class="muted small">${euro(spent)} so far</span></h2>
-        <p class="muted">Log rental, spa and other extras so the final bill has no surprises. Saved on this device only.</p>
-        <ul class="refs">
-          ${spend.map((s, i) => `<li>
-            <span><strong>${esc(s.what)}</strong><br>${euro(s.amount)}</span>
-            <button class="chip" data-action="del-spend" data-index="${i}" aria-label="Remove ${esc(s.what)}">Remove</button>
-          </li>`).join('')}
-        </ul>
-        <form class="inline-form" data-form="spend">
-          <label class="sr-only" for="spend-what">What it was for</label>
-          <input id="spend-what" name="what" placeholder="e.g. Board rental" autocomplete="off" required>
-          <label class="sr-only" for="spend-amount">Amount in euros</label>
-          <input id="spend-amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="Amount in €" required>
-          <button class="btn" type="submit">Add</button>
-        </form>
-      </section>
-
-      <section>
         <h2 class="section-title">Booking references</h2>
-        <p class="muted">Saved only on this device, so they stay off the public site. You'd need to add them on each phone.</p>
+        <p class="muted">${sharing() ? 'Shared with your group and never put on the public site.' : `Saved only on this phone, so they stay off the public site.${sync.configured ? ' Turn on sharing in Money to have them on every phone.' : " You'd need to add them on each phone."}`}</p>
         <ul class="refs">
-          ${refs.map((r, i) => `<li>
+          ${refs.map((r) => `<li>
             <span><strong>${esc(r.label)}</strong><br><code>${esc(r.value)}</code></span>
-            <button class="chip" data-action="del-ref" data-index="${i}" aria-label="Remove ${esc(r.label)}">Remove</button>
+            <button class="chip" data-action="del-ref" data-id="${esc(r.id)}" aria-label="Remove ${esc(r.label)}">Remove</button>
           </li>`).join('')}
         </ul>
         <form class="inline-form" data-form="ref">
@@ -1384,7 +1802,7 @@
   view.addEventListener('input', (event) => {
     const el = event.target;
     if (el.dataset.action === 'food-note') {
-      updateFood(el.dataset.id, { note: el.value });
+      updateFood(el.dataset.id, { notes: { ...foodEntry(el.dataset.id).notes, [meId()]: el.value } });
       return;
     }
     if (el.dataset.action !== 'journal') return;
@@ -1407,8 +1825,12 @@
       renderFoodList();
     } else if (action === 'food-rate') {
       const value = Number(el.dataset.value);
-      const current = foodEntry(el.dataset.id).rating || 0;
-      updateFood(el.dataset.id, value === current ? { rating: 0 } : { rating: value, tried: true });
+      const entry = foodEntry(el.dataset.id);
+      const ratings = { ...entry.ratings };
+      const clear = value === myRating(entry);
+      if (clear) delete ratings[meId()];
+      else ratings[meId()] = value;
+      updateFood(el.dataset.id, clear ? { ratings } : { ratings, tried: true });
       refreshFoodCard(el.dataset.id);
     } else if (action === 'food-tried') {
       updateFood(el.dataset.id, { tried: !foodEntry(el.dataset.id).tried });
@@ -1423,14 +1845,17 @@
     } else if (action === 'food-photo-delete') {
       const { id, photo } = viewer;
       document.getElementById('photo-viewer').close();
-      updateFood(id, { photos: (foodEntry(id).photos || []).filter((p) => p !== photo) });
+      const left = { ...foodEntry(id).photos };
+      delete left[photo];
+      updateFood(id, { photos: left });
       erasePhoto(photo).catch(() => {});
+      sync.deletePhoto(photo);
       if (photoUrls.has(photo)) { URL.revokeObjectURL(photoUrls.get(photo)); photoUrls.delete(photo); }
       refreshFoodCard(id);
     } else if (action === 'food-remove') {
       if (!window.confirm('Remove this dish, with its rating, note and photos?')) return;
       const { id } = el.dataset;
-      (foodEntry(id).photos || []).forEach((p) => erasePhoto(p).catch(() => {}));
+      photoIds(foodEntry(id)).forEach((p) => { erasePhoto(p).catch(() => {}); sync.deletePhoto(p); });
       const log = load('foodLog', {});
       delete log[id];
       save('foodLog', log);
@@ -1442,11 +1867,36 @@
       copyJournal();
     } else if (action === 'say') {
       speakFrench(el.dataset.text);
-    } else if (action === 'del-spend') {
-      const spend = load('spend', []);
-      spend.splice(Number(el.dataset.index), 1);
-      save('spend', spend);
-      refreshKit();
+    } else if (action === 'del-expense') {
+      const item = load('spend', []).find((e) => e.id === el.dataset.id);
+      if (!item || !window.confirm(`Remove "${item.what}"?`)) return;
+      save('spend', load('spend', []).filter((e) => e.id !== el.dataset.id));
+      refreshInfo('money');
+    } else if (action === 'settle') {
+      const amount = Number(el.dataset.amount);
+      save('spend', [...load('spend', []), {
+        id: newId('e'), what: 'Paid back', kind: 'settle', amount, cur: 'EUR', eur: amount,
+        paidBy: el.dataset.from, split: [el.dataset.to], at: Date.now(), by: meId(),
+      }]);
+      refreshInfo('money');
+    } else if (action === 'set-me') {
+      setMe(el.dataset.id);
+      refreshInfo('money');
+    } else if (action === 'del-person') {
+      const used = load('spend', []).some((e) => e.paidBy === el.dataset.id || (e.split || []).includes(el.dataset.id));
+      if (used) { window.alert('This person is on some expenses. Remove those first.'); return; }
+      if (!window.confirm(`Remove ${personName(el.dataset.id)}?`)) return;
+      save('people', people().filter((p) => p.id !== el.dataset.id));
+      if (load('me', null) === el.dataset.id) save('me', null);
+      refreshInfo('money');
+    } else if (action === 'share-invite' || action === 'share-copy') {
+      shareInvite(action === 'share-copy');
+    } else if (action === 'share-leave') {
+      if (!window.confirm('Stop sharing on this phone? Everything stays saved here, but stops syncing. You can rejoin with the invite link.')) return;
+      sync.leave();
+      refreshInfo('money');
+    } else if (action === 'join-trip') {
+      joinTrip(el);
     } else if (action === 'jump-lessons') {
       document.getElementById('lessons').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (action === 'piste-focus') {
@@ -1488,9 +1938,7 @@
       save(el.dataset.list, toggled(list, el.dataset.name, !list.includes(el.dataset.name)));
       renderExploreResults();
     } else if (action === 'del-ref') {
-      const refs = load('refs', []);
-      refs.splice(Number(el.dataset.index), 1);
-      save('refs', refs);
+      save('refs', load('refs', []).filter((r) => r.id !== el.dataset.id));
       refreshKit();
     }
   });
@@ -1513,10 +1961,45 @@
     event.preventDefault();
     const form = event.target;
     const data = new FormData(form);
+    if (form.dataset.form === 'join-paste') {
+      const match = String(data.get('link')).trim().match(/(?:#join\/)?([A-Za-z0-9]{20,40})\s*$/);
+      if (match) location.hash = `#join/${match[1]}`;
+      else document.getElementById('share-msg').textContent = "That doesn't look like an invite link.";
+      return;
+    }
+    if (form.dataset.form === 'share-start') {
+      startSharing(form);
+      return;
+    }
+    if (form.dataset.form === 'person') {
+      const name = String(data.get('name')).trim();
+      if (!name) return;
+      const id = newId('p');
+      save('people', [...people(), { id, name, at: Date.now() }]);
+      if (form.dataset.me) setMe(id);
+      refreshInfo('money');
+      return;
+    }
+    if (form.dataset.form === 'expense') {
+      const msg = document.getElementById('expense-msg');
+      const what = String(data.get('what')).trim();
+      const amount = Number(data.get('amount'));
+      const cur = data.get('cur') === 'ILS' && rate ? 'ILS' : 'EUR';
+      const ids = people().map((p) => p.id);
+      const me = load('me', null);
+      const paidBy = ids.length > 1 ? String(data.get('paidBy')) : (ids.includes(me) ? me : ids[0] || null);
+      const split = ids.length > 1 ? data.getAll('split').map(String) : (paidBy ? [paidBy] : []);
+      if (!what || !(amount > 0)) return;
+      if (ids.length > 1 && !split.length) { msg.textContent = 'Pick at least one person to split it with.'; return; }
+      const eur = cur === 'ILS' ? Math.round((amount / rate.ils) * 100) / 100 : amount;
+      save('spend', [...load('spend', []), { id: newId('e'), what, amount, cur, eur, paidBy, split, at: Date.now(), by: meId() }]);
+      refreshInfo('money');
+      return;
+    }
     if (form.dataset.form === 'food') {
       const name = String(data.get('name')).trim();
       if (name) {
-        save('customFood', [...load('customFood', []), { id: `c${Date.now()}`, name, custom: true }]);
+        save('customFood', [...load('customFood', []), { id: newId('c'), name, custom: true, at: Date.now() }]);
         form.reset();
         renderFoodList();
       }
@@ -1525,24 +2008,28 @@
     if (form.dataset.form === 'pack') {
       const item = String(data.get('item')).trim();
       if (item) save('packExtras', toggled(load('packExtras', []), item, true));
-    } else if (form.dataset.form === 'spend') {
-      const what = String(data.get('what')).trim();
-      const amount = Number(data.get('amount'));
-      if (what && amount > 0) save('spend', [...load('spend', []), { what, amount }]);
     } else if (form.dataset.form === 'ref') {
       const label = String(data.get('label')).trim();
       const value = String(data.get('value')).trim();
-      if (label && value) save('refs', [...load('refs', []), { label, value }]);
+      if (label && value) save('refs', [...load('refs', []), { id: newId('r'), label, value, at: Date.now() }]);
     }
     refreshKit();
   });
 
   view.addEventListener('toggle', () => { if (map) map.invalidateSize(); }, true);
+  view.addEventListener('focusout', refreshIfWaiting);
+  view.addEventListener('close', refreshIfWaiting, true);
 
   window.addEventListener('hashchange', route);
 
   /* ---------- boot ---------- */
+  migrateData();
+  migrateTried();
+  migrateFood();
   route();
+  if (window.CarnetSync) {
+    window.CarnetSync.init({ onData: refreshAfterSync, onStatus: showSyncStatus, readPhoto: (id) => readPhoto(id) });
+  }
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }

@@ -664,3 +664,51 @@ body.is-map .seg { flex: none; }
 .compass { position: absolute; z-index: 800; left: 10px; bottom: 10px; display: flex; flex-direction: column; align-items: center; padding: 2px; background: rgb(255 255 255 / 92%); border-radius: 12px; box-shadow: 0 1px 5px rgb(0 0 0 / 35%); pointer-events: none; }
 .compass svg { display: block; }
 .compass span { padding: 0 4px 3px; color: #14213d; font: 700 10px var(--sans); white-space: nowrap; }
+
+/* Money and sharing */
+.panel { background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--bleu); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.panel .section-title { margin-bottom: 0; }
+.panel p { margin: 0; }
+.panel .btn, .panel .inline-form { margin-top: 0; }
+.sync-status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.sync-status.is-synced .sync-dot { background: #1e8a4c; }
+.sync-status.is-saving .sync-dot, .sync-status.is-connecting .sync-dot { background: #d99a00; }
+.sync-status.is-offline .sync-dot { background: var(--muted); }
+.sync-status.is-error { color: var(--rouge); }
+.sync-status.is-error .sync-dot { background: var(--rouge); }
+.who { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 8px; background: color-mix(in srgb, var(--bleu) 8%, transparent); }
+.who .chips { margin-bottom: 0; }
+.fold-lite > summary { cursor: pointer; color: var(--bleu); font-weight: 600; min-height: 40px; display: flex; align-items: center; }
+.fold-lite[open] { display: flex; flex-direction: column; gap: 10px; }
+code.invite { display: block; margin-top: 6px; word-break: break-all; user-select: all; }
+.money-top { display: flex; flex-direction: column; gap: 12px; }
+.money-total { display: flex; flex-direction: column; margin: 0; }
+.money-total strong { font: 600 40px/1.1 var(--serif); }
+.money-people { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.money-people li { display: flex; flex-direction: column; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+.money-form { display: flex; flex-direction: column; gap: 12px; }
+.money-form .inline-form { margin-top: 0; }
+.money-form .btn { margin-top: 0; align-self: flex-start; }
+.money-field { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.money-field > label, .money-field > legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.money-field .chips { margin-bottom: 0; }
+.money-form select, .money-field select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font: 16px var(--sans);
+}
+.chip-check { padding: 0 14px; border: 1px solid var(--line); border-radius: 99px; min-height: 44px; }
+.chip-check input:checked + span { text-decoration: none; color: var(--ink); }
+.chip-check:has(input:checked) { border-color: var(--bleu); background: color-mix(in srgb, var(--bleu) 10%, transparent); }
+.refs li.is-settle strong { color: #1e8a4c; }
+.refs .card-actions { margin: 0; padding: 0; flex: none; }
+
+/* Food: the others' ratings */
+.food-others { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.stars-small { color: #d99a00; letter-spacing: 1px; }
+.food-thumb.is-waiting { display: inline-grid; place-items: center; padding: 6px; font-size: 12px; text-align: center; color: var(--muted); cursor: default; }
